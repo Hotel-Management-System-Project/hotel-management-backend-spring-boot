@@ -36,11 +36,29 @@ public class JwtFilter extends OncePerRequestFilter {
             String token = header.substring(7);
             var claims = jwtUtil.extractClaims(token);
 
-            request.setAttribute("email", claims.getSubject());
-            request.setAttribute("role", claims.get("role"));
+            String email = claims.getSubject();
+            String role = (String) claims.get("role"); // Extract the role string
+
+            if (email != null && org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication() == null) {
+                // Convert your string role into a GrantedAuthority Spring Security understands
+                var authorities = java.util.List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority(role));
+
+                // Create the authentication object
+                var authToken = new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+                        email, null, authorities
+                );
+
+                // Tell Spring Security that this request is officially authenticated
+                org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(authToken);
+            }
+
+            // Keep these in case your controllers read them directly from request attributes
+            request.setAttribute("email", email);
+            request.setAttribute("role", role);
         }
 
         chain.doFilter(request, response);
     }
+
 
 }
