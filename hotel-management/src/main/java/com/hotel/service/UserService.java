@@ -23,7 +23,10 @@ public class UserService {
 
     public User signup(User user) {
         user.setPassword(encoder.encode(user.getPassword()));
-        user.setRole(User.Role.CUSTOMER);
+    
+        if (user.getRole() == null) {
+            user.setRole(User.Role.CUSTOMER);
+        }
         return repo.save(user);
     }
 
