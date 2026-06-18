@@ -4,21 +4,17 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.modelmapper.ModelMapper;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import jakarta.servlet.http.HttpServletRequest;
 
+import org.modelmapper.ModelMapper;
+import org.springframework.web.bind.annotation.*;
+
+import com.hotel.config.JwtUtil;
 import com.hotel.dto.BookingDTO;
 import com.hotel.model.Booking;
+import com.hotel.model.User;
 import com.hotel.service.BookingService;
+import com.hotel.service.UserService;
 import com.hotel.utils.Resp;
 
 @RestController
@@ -26,105 +22,110 @@ import com.hotel.utils.Resp;
 @CrossOrigin("*")
 public class BookingController {
 
+    private final BookingService service;
+    private final ModelMapper mapper;
+    private final JwtUtil jwtUtil;
+    private final UserService userService;
 
-	 private final BookingService service;
-	    private final ModelMapper mapper;
+    public BookingController(BookingService service,
+                             ModelMapper mapper,
+                             JwtUtil jwtUtil,
+                             UserService userService) {
+        this.service = service;
+        this.mapper = mapper;
+        this.jwtUtil = jwtUtil;
+        this.userService = userService;
+    }
 
-	    public BookingController(BookingService service, ModelMapper mapper) {
-	        this.service = service;
-	        this.mapper = mapper;
-	    }
+    // 🔑 COMMON METHOD (avoid duplicate code)
+    private User getUserFromToken(HttpServletRequest request) {
 
+        String authHeader = request.getHeader("Authorization");
 
-	    @PostMapping("/user/{userId}")
-	    public Resp<BookingDTO> create(@PathVariable int userId,
-	                                   @RequestBody BookingDTO dto) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            throw new RuntimeException("Invalid or missing token");
+        }
 
-	        Booking booking = mapper.map(dto, Booking.class);
-	        booking.setUserId(userId);
+        String token = authHeader.substring(7);
+        String email = jwtUtil.extractEmail(token);
 
-	        Booking saved = service.createBooking(booking);
+        return userService.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+    }
 
-	        return Resp.success(mapper.map(saved, BookingDTO.class));
-	    }
-	 
-	 
-	    @GetMapping("/user/{userId}")
-	    public Resp<List<BookingDTO>> getUserBookings(@PathVariable int userId) {
+    // ✅ CREATE BOOKING
+    @PostMapping
+    public Resp<BookingDTO> create(HttpServletRequest request,
+                                   @RequestBody BookingDTO dto) {
 
-	        List<BookingDTO> list = service.getUserBookings(userId)
-	                .stream()
-	                .map(b -> mapper.map(b, BookingDTO.class))
-	                .collect(Collectors.toList());
+        User user = getUserFromToken(request);
 
-	        return Resp.success(list);
-	    }
-	    
-	    
-	    @GetMapping
-	    public Resp<List<BookingDTO>> getAll() {
+        Booking booking = mapper.map(dto, Booking.class);
+        booking.setUserId(user.getUserId());
 
-	        List<BookingDTO> list = service.getAllBookings()
-	                .stream()
-	                .map(b -> mapper.map(b, BookingDTO.class))
-	                .collect(Collectors.toList());
+        Booking saved = service.createBooking(booking);
 
-	        return Resp.success(list);
-	    }
-	    
-	    
-	    @GetMapping("/{id}")
-	    public Resp<BookingDTO> getById(@PathVariable int id) {
-	        return Resp.success(mapper.map(service.getById(id), BookingDTO.class));
-	    }
-	    
-	    
-	    
-	    
-	    @PutMapping("/{id}")
-	    public Resp<BookingDTO> update(@PathVariable int id,
-	                                   @RequestBody BookingDTO dto) {
+        return Resp.success(mapper.map(saved, BookingDTO.class));
+    }
 
-	        Booking booking = mapper.map(dto, Booking.class);
+    // ✅ GET MY BOOKINGS
+    @GetMapping("/my")
+    public Resp<List<BookingDTO>> getMyBookings(HttpServletRequest request) {
 
-	        return Resp.success(
-	                mapper.map(service.updateBooking(id, booking), BookingDTO.class)
-	        );
-	    }
-	    
-	    
-	 
-	 
-	    @PutMapping("/cancel/{id}")
-	    public Resp<String> cancel(@PathVariable int id) {
-	        service.cancelBooking(id);
-	        return Resp.success("Booking Cancelled Successfully");
-	    }
-	    
-	    
-	    @GetMapping("/search")
-	    public Resp<List<BookingDTO>> search(
-	            @RequestParam String from,
-	            @RequestParam String to) {
+        User user = getUserFromToken(request);
 
-	        List<BookingDTO> list = service.searchByDate(
-	                        LocalDate.parse(from),
-	                        LocalDate.parse(to))
-	                .stream()
-	                .map(b -> mapper.map(b, BookingDTO.class))
-	                .collect(Collectors.toList());
+        List<BookingDTO> list = service.getUserBookings(user.getUserId())
+                .stream()
+                .map(b -> mapper.map(b, BookingDTO.class))
+                .collect(Collectors.toList());
 
-	        return Resp.success(list);
-	    }
-	    
-	    
-	    
-	    @DeleteMapping("/{id}")
-	    public Resp<String> delete(@PathVariable int id) {
-	        service.deleteBooking(id);
-	        return Resp.success("Booking Deleted Successfully");
-	    }
-	    
-	    
-	 
+        return Resp.success(list);
+    }
+
+    @GetMapping
+    public Resp<List<BookingDTO>> getAll() {
+        return Resp.success(
+                service.getAllBookings().stream()
+                        .map(b -> mapper.map(b, BookingDTO.class))
+                        .collect(Collectors.toList())
+        );
+    }
+
+    @GetMapping("/{id}")
+    public Resp<BookingDTO> getById(@PathVariable int id) {
+        return Resp.success(mapper.map(service.getById(id), BookingDTO.class));
+    }
+
+    @PutMapping("/{id}")
+    public Resp<BookingDTO> update(@PathVariable int id,
+                                   @RequestBody BookingDTO dto) {
+
+        return Resp.success(
+                mapper.map(service.updateBooking(id, mapper.map(dto, Booking.class)), BookingDTO.class)
+        );
+    }
+
+    @PutMapping("/cancel/{id}")
+    public Resp<String> cancel(@PathVariable int id) {
+        service.cancelBooking(id);
+        return Resp.success("Booking Cancelled Successfully");
+    }
+
+    @DeleteMapping("/{id}")
+    public Resp<String> delete(@PathVariable int id) {
+        service.deleteBooking(id);
+        return Resp.success("Booking Deleted Successfully");
+    }
+
+    @GetMapping("/search")
+    public Resp<List<BookingDTO>> search(@RequestParam String from,
+                                         @RequestParam String to) {
+
+        return Resp.success(
+                service.searchByDate(LocalDate.parse(from), LocalDate.parse(to))
+                        .stream()
+                        .map(b -> mapper.map(b, BookingDTO.class))
+                        .collect(Collectors.toList())
+        );
+    }
 }
