@@ -22,7 +22,6 @@ public class SecurityConfig {
         http
             .csrf(csrf -> csrf.disable())
 
-            // 🔥 disable default login form (VERY IMPORTANT)
             .formLogin(form -> form.disable())
             .httpBasic(basic -> basic.disable())
 
@@ -31,7 +30,6 @@ public class SecurityConfig {
                 .anyRequest().authenticated()
             )
 
-            // 🔥 add JWT filter
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
