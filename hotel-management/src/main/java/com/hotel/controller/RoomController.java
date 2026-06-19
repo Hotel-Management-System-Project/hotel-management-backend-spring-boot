@@ -74,6 +74,18 @@ public class RoomController {
 	}
 	
 	
+	
+	//find by room type 
+	@GetMapping("/getRoomByType/{roomType}")
+	public Resp<List<RoomResponseDTO>> getRoomByType(
+	        @PathVariable String roomType) {
+
+	    List<RoomResponseDTO> rooms =
+	            roomService.findRoomByType(roomType);
+
+	    return Resp.success(rooms);
+	}
+	
 	@PutMapping("/updateById/{id}")
 	public Resp<RoomResponseDTO> updateRoomById(
 	        @PathVariable Integer id,
@@ -85,4 +97,25 @@ public class RoomController {
 	    return Resp.success(updatedRoom);
 	}
 	
+	
+	//delete by room id
+	@DeleteMapping("/deleteRoomById/{id}")
+	public Resp<RoomResponseDTO> deleteRoomById(
+	        @PathVariable Integer id) {
+
+	    RoomResponseDTO deletedRoom =
+	            roomService.deleteRoomById(id);
+
+	    return Resp.success(deletedRoom);
+	}
+	
+	
+	
+	@GetMapping("/getRoomByRoomNumber/{roomNumber}")
+	public Resp<RoomResponseDTO> getRoomByRoomNumber(@PathVariable Integer roomNumber) {
+
+	    RoomResponseDTO room = roomService.findRoomByRoomNumber(roomNumber);
+
+	    return Resp.success(room);
+	}
 }
