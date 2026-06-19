@@ -69,6 +69,22 @@ public class RoomService {
 	
 	
 	
+	
+	// Find room by room type
+	public List<RoomResponseDTO> findRoomByType(String roomType) {
+
+	    List<Room> rooms = roomRepoRepository.findByRoomType(roomType);
+
+	    if (rooms.isEmpty()) {
+	        throw new RuntimeException("No rooms found with room type: " + roomType);
+	    }
+
+	    return rooms.stream()
+	            .map(room -> modelMapper.map(room, RoomResponseDTO.class))
+	            .collect(Collectors.toList());
+	}	
+	
+	
 	// update room by Room Number
 	public RoomResponseDTO updateRoomByRoomNumber(Integer roomNumber, RoomRequestDTO dto) {
 
@@ -104,6 +120,30 @@ public class RoomService {
 
 	    return modelMapper.map(updatedRoom, RoomResponseDTO.class);
 	}
+	
+	
+	//delete by room Id
+	public RoomResponseDTO deleteRoomById(Integer id) {
+
+	    Room room = roomRepoRepository.findById(id)
+	            .orElseThrow(() ->
+	                    new RuntimeException("Room not found with id: " + id));
+
+	    roomRepoRepository.delete(room);
+
+	    return modelMapper.map(room, RoomResponseDTO.class);
+	}
+	
+	// Find room by room number
+	public RoomResponseDTO findRoomByRoomNumber(Integer roomNumber) {
+
+	    Room room = roomRepoRepository.findByRoomNumber(roomNumber)
+	            .orElseThrow(() ->
+	                    new RuntimeException("Room not found with room number: " + roomNumber));
+
+	    return modelMapper.map(room, RoomResponseDTO.class);
+	}
+
 	
 	
 }
