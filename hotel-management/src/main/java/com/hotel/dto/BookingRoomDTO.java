@@ -5,9 +5,9 @@ import lombok.Data;
 @Data
 public class BookingRoomDTO {
 
-    private int bookingRoomId;
-    private int bookingId;
-    private int roomId;
+    private Integer bookingRoomId;
+    private Integer bookingId;
+    private Integer roomId;
 
     private double pricePerNight;
 }

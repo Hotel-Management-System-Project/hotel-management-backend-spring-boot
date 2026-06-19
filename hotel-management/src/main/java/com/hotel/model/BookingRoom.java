@@ -20,9 +20,9 @@ public class BookingRoom {
 
 	 @Id
 	 @GeneratedValue(strategy = GenerationType.IDENTITY)
-	 private int bookingRoomId;
+	 private Integer bookingRoomId;
 	 
-	 private int bookingId;   
+	 private Integer bookingId;   
 	 
 	 private int roomId;
 	 

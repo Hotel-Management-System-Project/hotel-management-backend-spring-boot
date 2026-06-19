@@ -40,7 +40,7 @@ public class RoomRequestDTO {
 	
 	
 	@NotNull(message = "Avalability Status is required ")
-	private boolean availabilityStatus;
+	private Boolean  availabilityStatus;
 	
 
 

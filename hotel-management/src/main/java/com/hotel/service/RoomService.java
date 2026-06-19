@@ -79,7 +79,7 @@ public class RoomService {
 	    room.setRoomType(dto.getRoomType());
 	    room.setCapacity(dto.getCapacity());
 	    room.setPricePerNight(dto.getPricePerNight());
-	    room.setAvailabilityStatus(dto.isAvailabilityStatus());
+	    room.setAvailabilityStatus(dto.getAvailabilityStatus());
 
 	    Room updatedRoom = roomRepoRepository.save(room);
 
@@ -98,7 +98,7 @@ public class RoomService {
 	    room.setRoomType(dto.getRoomType());
 	    room.setPricePerNight(dto.getPricePerNight());
 	    room.setCapacity(dto.getCapacity());
-	    room.setAvailabilityStatus(dto.isAvailabilityStatus());
+	    room.setAvailabilityStatus(dto.getAvailabilityStatus());
 
 	    Room updatedRoom = roomRepoRepository.save(room);
 

@@ -9,8 +9,8 @@ import lombok.Data;
 @Data
 public class BookingDTO {
 
-    private int bookingId;
-    private int userId;
+    private Integer bookingId;
+    private Integer userId;
 
     private LocalDate checkInDate;
     private LocalDate checkOutDate;
