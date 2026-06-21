@@ -6,12 +6,12 @@ import java.util.List;
 import jakarta.persistence.*;
 import lombok.*;
 
+@Entity
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Entity
 @Table(name = "users")
 public class User {
 
@@ -19,6 +19,7 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer userId;
 
+    @Column(nullable = false)
     private String fullName;
 
     @Column(unique = true, nullable = false)
@@ -34,7 +35,16 @@ public class User {
 
     private Boolean activeStatus = true;
 
-    private LocalDateTime createdAt = LocalDateTime.now();
-    
- 
+    private LocalDateTime createdAt;
+
+    @PrePersist
+    public void prePersist() {
+        this.createdAt = LocalDateTime.now();
+    }
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Booking> bookings;
+
+    @OneToMany(mappedBy = "owner")
+    private List<Hotel> hotels;
 }

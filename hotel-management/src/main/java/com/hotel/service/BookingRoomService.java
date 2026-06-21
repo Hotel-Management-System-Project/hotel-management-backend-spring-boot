@@ -7,77 +7,73 @@ import org.springframework.stereotype.Service;
 
 import com.hotel.model.Booking;
 import com.hotel.model.BookingRoom;
+import com.hotel.model.Room;
 import com.hotel.repository.BookingRepository;
 import com.hotel.repository.BookingRoomRepository;
 
-
-
 @Service
 public class BookingRoomService {
-	
-	 private final BookingRoomRepository repo;
-	    private final BookingRepository bookingRepo;
 
-	    public BookingRoomService(BookingRoomRepository repo,
-	                              BookingRepository bookingRepo) {
-	        this.repo = repo;
-	        this.bookingRepo = bookingRepo;
-	    }
+    private final BookingRoomRepository repo;
+    private final BookingRepository bookingRepo;
 
+    public BookingRoomService(BookingRoomRepository repo,
+                              BookingRepository bookingRepo) {
+        this.repo = repo;
+        this.bookingRepo = bookingRepo;
+    }
 
+    // ✅ CHECK AVAILABILITY
+    public boolean isRoomAvailable(Room room, Booking booking) {
 
-	  public boolean isRoomAvailable(int roomId, int bookingId) {
+        LocalDate checkIn = booking.getCheckInDate();
+        LocalDate checkOut = booking.getCheckOutDate();
 
-	        Booking booking = bookingRepo.findById(bookingId)
-	                .orElseThrow(() -> new RuntimeException("Booking not found"));
+        List<BookingRoom> conflicts =
+                repo.findConflictingBookings(room, checkIn, checkOut);
 
-	        LocalDate checkIn = booking.getCheckInDate();
-	        LocalDate checkOut = booking.getCheckOutDate();
+        return conflicts.isEmpty();
+    }
 
-	        List<BookingRoom> conflicts =
-	                repo.findConflictingBookings(roomId, checkIn, checkOut);
+    // ✅ ADD ROOM
+    public BookingRoom addRoomToBooking(BookingRoom br) {
 
-	        return conflicts.isEmpty();
-	    }
-	  
-	  public BookingRoom addRoomToBooking(BookingRoom br) {
+        if (!isRoomAvailable(br.getRoom(), br.getBooking())) {
+            throw new RuntimeException("Room already booked");
+        }
 
-	        boolean available = isRoomAvailable(br.getRoomId(), br.getBookingId());
+        return repo.save(br);
+    }
 
-	        if (!available) {
-	            throw new RuntimeException("Room already booked for selected dates");
-	        }
+    // ✅ GET ROOMS BY BOOKING
+    public List<BookingRoom> getRoomsByBooking(int bookingId) {
 
-	        return repo.save(br);
-	    }
-	  
-	  
-	  
-	    public List<BookingRoom> getRoomsByBooking(int bookingId) {
-	        return repo.findByBookingId(bookingId);
-	    }
+        Booking booking = bookingRepo.findById(bookingId)
+                .orElseThrow(() -> new RuntimeException("Booking not found"));
 
-	    
-	    public List<BookingRoom> getAll() {
-	        return repo.findAll();
-	    }
-	    
-	    
+        return repo.findByBooking(booking);
+    }
 
-	    public BookingRoom update(int id, BookingRoom updated) {
+    public List<BookingRoom> getAll() {
+        return repo.findAll();
+    }
 
-	        BookingRoom br = repo.findById(id)
-	                .orElseThrow(() -> new RuntimeException("Not found"));
+    public BookingRoom update(int id, BookingRoom updated) {
 
-	        br.setPricePerNight(updated.getPricePerNight());
+        BookingRoom existing = repo.findById(id)
+                .orElseThrow(() -> new RuntimeException("Not found"));
 
-	        return repo.save(br);
-	    }
-	    
-	    
-	    public void removeRoom(int id) {
-	        repo.deleteById(id);
-	    }
-	    
-	    
+        existing.setPricePerNight(updated.getPricePerNight());
+
+        return repo.save(existing);
+    }
+
+    public void removeRoom(int id) {
+        repo.deleteById(id);
+    }
+
+    public BookingRoom getById(int id) {
+        return repo.findById(id)
+                .orElseThrow(() -> new RuntimeException("Not Found"));
+    }
 }

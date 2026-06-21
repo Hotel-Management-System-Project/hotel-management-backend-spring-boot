@@ -9,101 +9,131 @@ import org.springframework.stereotype.Service;
 
 import com.hotel.dto.RoomRequestDTO;
 import com.hotel.dto.RoomResponseDTO;
+import com.hotel.model.Hotel;
 import com.hotel.model.Room;
 import com.hotel.repository.RoomRepoRepository;
 
-import jakarta.transaction.Transactional;
-
-@Transactional
 @Service
 public class RoomService {
-	@Autowired
-	private ModelMapper modelMapper;
-	@Autowired
-	private RoomRepoRepository roomRepoRepository;
 
-	
-	
-	//add rooms 
-	public RoomResponseDTO addRoom(RoomRequestDTO dto) {
-		Room room = modelMapper.map(dto, Room.class);
-		Room saveRoom = roomRepoRepository.save(room);
-		RoomResponseDTO rrdto = modelMapper.map(saveRoom, RoomResponseDTO.class);
-		return rrdto;
-	}
+    @Autowired
+    private ModelMapper modelMapper;
 
-	
-	
-	//Get All Rooms
-	public List<RoomResponseDTO> getAllRooms() {
-		List<Room> rooms = roomRepoRepository.findAll();
-		return rooms.stream().map(room -> modelMapper.map(room, RoomResponseDTO.class)).collect(Collectors.toList());
-	}
+    @Autowired
+    private RoomRepoRepository roomRepoRepository;
 
-	
-	
-	
-	//delete by room Number 
-	public RoomResponseDTO deleteByRoomNumber(Integer roomNumber) {
-		 Room room = roomRepoRepository.findByRoomNumber(roomNumber)
-		            .orElseThrow(() -> new RuntimeException("Room not found with room number: " + roomNumber));
+    // ✅ ADD ROOM
+    public RoomResponseDTO addRoom(RoomRequestDTO dto) {
 
-		    RoomResponseDTO response = modelMapper.map(room, RoomResponseDTO.class);
+        Room room = new Room();
 
-		    roomRepoRepository.delete(room);
+        room.setRoomNumber(dto.getRoomNumber());
+        room.setRoomType(dto.getRoomType());
+        room.setPricePerNight(dto.getPricePerNight());
+        room.setCapacity(dto.getCapacity());
 
-		    return response;
-	}
-	
-	
-	//find by room Id
-	public RoomResponseDTO findRoomById(int id) {
+        room.setAvailabilityStatus(
+                Boolean.TRUE.equals(dto.getAvailabilityStatus())
+        );
 
-	    Room room = roomRepoRepository.findById(id)
-	            .orElseThrow(() ->
-	                new RuntimeException("Room not found with id: " + id));
+        Hotel hotel = new Hotel();
+        hotel.setHotelId(dto.getHotelId());
+        room.setHotel(hotel);
 
-	    return modelMapper.map(room, RoomResponseDTO.class);
-	}
- 
-	
-	
-	
-	// update room by Room Number
-	public RoomResponseDTO updateRoomByRoomNumber(Integer roomNumber, RoomRequestDTO dto) {
+        Room saved = roomRepoRepository.save(room);
 
-	    Room room = roomRepoRepository.findByRoomNumber(roomNumber)
-	            .orElseThrow(() ->
-	                    new RuntimeException("Room not found with room number: " + roomNumber));
+        return modelMapper.map(saved, RoomResponseDTO.class);
+    }
 
-	    room.setRoomType(dto.getRoomType());
-	    room.setCapacity(dto.getCapacity());
-	    room.setPricePerNight(dto.getPricePerNight());
-	    room.setAvailabilityStatus(dto.getAvailabilityStatus());
+    // ✅ GET ALL
+    public List<RoomResponseDTO> getAllRooms() {
+        return roomRepoRepository.findAll()
+                .stream()
+                .map(r -> modelMapper.map(r, RoomResponseDTO.class))
+                .collect(Collectors.toList());
+    }
 
-	    Room updatedRoom = roomRepoRepository.save(room);
+    // ✅ DELETE BY ROOM NUMBER
+    public RoomResponseDTO deleteByRoomNumber(Integer roomNumber) {
 
-	    return modelMapper.map(updatedRoom, RoomResponseDTO.class);
-	}
-	
-	
-	//Update room by id 
-	public RoomResponseDTO updateRoomById(Integer id, RoomRequestDTO dto) {
+        Room room = roomRepoRepository.findByRoomNumber(roomNumber)
+                .orElseThrow(() -> new RuntimeException("Room not found"));
 
-	    Room room = roomRepoRepository.findById(id)
-	            .orElseThrow(() ->
-	                    new RuntimeException("Room not found with id: " + id));
+        roomRepoRepository.delete(room);
 
-	    room.setRoomNumber(dto.getRoomNumber());
-	    room.setRoomType(dto.getRoomType());
-	    room.setPricePerNight(dto.getPricePerNight());
-	    room.setCapacity(dto.getCapacity());
-	    room.setAvailabilityStatus(dto.getAvailabilityStatus());
+        return modelMapper.map(room, RoomResponseDTO.class);
+    }
 
-	    Room updatedRoom = roomRepoRepository.save(room);
+    // ✅ GET BY ID
+    public RoomResponseDTO findRoomById(int id) {
 
-	    return modelMapper.map(updatedRoom, RoomResponseDTO.class);
-	}
-	
-	
+        Room room = roomRepoRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Room not found"));
+
+        return modelMapper.map(room, RoomResponseDTO.class);
+    }
+
+    // ✅ GET ENTITY (IMPORTANT FOR BOOKING)
+    public Room getRoomEntityById(int id) {
+        return roomRepoRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Room not found"));
+    }
+
+    // ✅ FIND BY TYPE
+    public List<RoomResponseDTO> findRoomByType(String roomType) {
+
+        return roomRepoRepository.findByRoomType(roomType)
+                .stream()
+                .map(r -> modelMapper.map(r, RoomResponseDTO.class))
+                .collect(Collectors.toList());
+    }
+
+    // ✅ UPDATE BY ROOM NUMBER
+    public RoomResponseDTO updateRoomByRoomNumber(Integer roomNumber, RoomRequestDTO dto) {
+
+        Room room = roomRepoRepository.findByRoomNumber(roomNumber)
+                .orElseThrow(() -> new RuntimeException("Room not found"));
+
+        room.setRoomType(dto.getRoomType());
+        room.setCapacity(dto.getCapacity());
+        room.setPricePerNight(dto.getPricePerNight());
+        room.setAvailabilityStatus(Boolean.TRUE.equals(dto.getAvailabilityStatus()));
+
+        return modelMapper.map(roomRepoRepository.save(room), RoomResponseDTO.class);
+    }
+
+    // ✅ UPDATE BY ID
+    public RoomResponseDTO updateRoomById(Integer id, RoomRequestDTO dto) {
+
+        Room room = roomRepoRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Room not found"));
+
+        room.setRoomNumber(dto.getRoomNumber());
+        room.setRoomType(dto.getRoomType());
+        room.setPricePerNight(dto.getPricePerNight());
+        room.setCapacity(dto.getCapacity());
+        room.setAvailabilityStatus(Boolean.TRUE.equals(dto.getAvailabilityStatus()));
+
+        return modelMapper.map(roomRepoRepository.save(room), RoomResponseDTO.class);
+    }
+
+    // ✅ DELETE BY ID
+    public RoomResponseDTO deleteRoomById(Integer id) {
+
+        Room room = roomRepoRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Room not found"));
+
+        roomRepoRepository.delete(room);
+
+        return modelMapper.map(room, RoomResponseDTO.class);
+    }
+
+    // ✅ FIND BY ROOM NUMBER
+    public RoomResponseDTO findRoomByRoomNumber(Integer roomNumber) {
+
+        Room room = roomRepoRepository.findByRoomNumber(roomNumber)
+                .orElseThrow(() -> new RuntimeException("Room not found"));
+
+        return modelMapper.map(room, RoomResponseDTO.class);
+    }
 }

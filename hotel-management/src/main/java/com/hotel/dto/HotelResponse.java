@@ -10,8 +10,8 @@ import lombok.Setter;
 @Setter
 public class HotelResponse {
 
-    private Long hotelId;
-    private Long ownerId;
+    private Integer  hotelId;
+    private Integer  ownerId;
     private String hotelName;
     private String description;
     private String address;

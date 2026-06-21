@@ -9,7 +9,7 @@ import lombok.Setter;
 @Setter
 public class HotelRequest {
 
-    private Long ownerId;
+    private Integer  ownerId;
     private String hotelName;
     private String description;
     private String address;

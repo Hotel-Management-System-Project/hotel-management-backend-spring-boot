@@ -5,26 +5,26 @@ import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
-import org.springframework.stereotype.Repository;
 
+import com.hotel.model.Booking;
 import com.hotel.model.BookingRoom;
+import com.hotel.model.Room;
+import org.springframework.data.repository.query.Param;
 
-@Repository
+
 public interface BookingRoomRepository extends JpaRepository<BookingRoom, Integer> {
-	List<BookingRoom> findByBookingId(int bookingId);
-	
-	 @Query("""
-		        SELECT br FROM BookingRoom br
-		        JOIN Booking b ON br.bookingId = b.bookingId
-		        WHERE br.roomId = :roomId
-		        AND b.checkInDate < :checkOut
-		        AND b.checkOutDate > :checkIn
-		    """)
-		    List<BookingRoom> findConflictingBookings(
-		            @Param("roomId") int roomId,
-		            @Param("checkIn") LocalDate checkIn,
-		            @Param("checkOut") LocalDate checkOut
-		    );
-}
 
+    List<BookingRoom> findByBooking(Booking booking);
+
+    @Query("""
+    	    SELECT br FROM BookingRoom br
+    	    WHERE br.room = :room
+    	    AND br.booking.checkInDate < :checkOut
+    	    AND br.booking.checkOutDate > :checkIn
+    	""")
+    	List<BookingRoom> findConflictingBookings(
+    	        @Param("room") Room room,
+    	        @Param("checkIn") LocalDate checkIn,
+    	        @Param("checkOut") LocalDate checkOut
+    	);
+}

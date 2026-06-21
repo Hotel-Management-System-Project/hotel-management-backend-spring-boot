@@ -9,7 +9,9 @@ import org.springframework.web.bind.annotation.*;
 
 import com.hotel.dto.BookingDTO;
 import com.hotel.model.Booking;
+import com.hotel.model.User;
 import com.hotel.service.BookingService;
+import com.hotel.service.UserService;
 import com.hotel.utils.Resp;
 
 @RestController
@@ -19,18 +21,25 @@ public class BookingController {
 
     private final BookingService service;
     private final ModelMapper mapper;
+    private final UserService userService;
 
-    public BookingController(BookingService service, ModelMapper mapper) {
+    public BookingController(BookingService service,
+                             ModelMapper mapper,
+                             UserService userService) {
         this.service = service;
         this.mapper = mapper;
+        this.userService = userService;
     }
 
-    // 🔐 Get Logged-in User ID from JWT
-    private Integer getUserId() {
-        return (Integer) SecurityContextHolder
+    // 🔐 Get Logged-in User
+    private User getUser() {
+        String email = SecurityContextHolder
                 .getContext()
                 .getAuthentication()
-                .getPrincipal();
+                .getName();
+
+        return userService.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
     }
 
     private boolean isAdmin() {
@@ -41,27 +50,27 @@ public class BookingController {
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
     }
 
-    // ✅ CREATE BOOKING (SECURE)
+    // ✅ CREATE BOOKING
     @PostMapping
-    public Resp<BookingDTO> create(@RequestBody BookingDTO dto) {
+    public Resp<?> create(@RequestBody BookingDTO dto) {
 
-        Integer userId = getUserId();
+        User user = getUser();
 
         Booking booking = mapper.map(dto, Booking.class);
-        booking.setUserId(userId);
+        booking.setUser(user); // ✅ FIXED
 
         return Resp.success(
                 mapper.map(service.createBooking(booking), BookingDTO.class)
         );
     }
 
-    // ✅ GET MY BOOKINGS (SECURE)
+    // ✅ GET MY BOOKINGS
     @GetMapping("/my")
-    public Resp<List<BookingDTO>> getMyBookings() {
+    public Resp<?> getMyBookings() {
 
-        Integer userId = getUserId();
+        User user = getUser();
 
-        List<BookingDTO> list = service.getUserBookings(userId)
+        List<BookingDTO> list = service.getUserBookings(user.getUserId())
                 .stream()
                 .map(b -> mapper.map(b, BookingDTO.class))
                 .toList();
@@ -69,9 +78,9 @@ public class BookingController {
         return Resp.success(list);
     }
 
-    // ✅ ADMIN ONLY - GET ALL BOOKINGS
+    // ✅ ADMIN ONLY
     @GetMapping
-    public Resp<List<BookingDTO>> getAll() {
+    public Resp<?> getAll() {
 
         if (!isAdmin()) {
             return Resp.error("Access Denied");
@@ -85,52 +94,55 @@ public class BookingController {
         return Resp.success(list);
     }
 
-    // ✅ GET BY ID (SECURE OWNER CHECK)
+    // ✅ GET BY ID
     @GetMapping("/{id}")
     public Resp<?> getById(@PathVariable int id) {
 
         Booking booking = service.getById(id);
 
-        if (!isAdmin() && booking.getUserId() != getUserId()) {
-            return Resp.error("Unauthorized Access");
+        if (!isAdmin() && 
+            !booking.getUser().getUserId().equals(getUser().getUserId())) {
+            return Resp.error("Unauthorized");
         }
 
         return Resp.success(mapper.map(booking, BookingDTO.class));
     }
 
-    // ✅ UPDATE (OWNER OR ADMIN)
+    // ✅ UPDATE
     @PutMapping("/{id}")
     public Resp<?> update(@PathVariable int id,
                           @RequestBody BookingDTO dto) {
 
         Booking existing = service.getById(id);
 
-        if (!isAdmin() && existing.getUserId() != getUserId()) {
+        if (!isAdmin() && 
+            !existing.getUser().getUserId().equals(getUser().getUserId())) {
             return Resp.error("Unauthorized");
         }
 
-        Booking booking = mapper.map(dto, Booking.class);
+        Booking updated = mapper.map(dto, Booking.class);
 
         return Resp.success(
-                mapper.map(service.updateBooking(id, booking), BookingDTO.class)
+                mapper.map(service.updateBooking(id, updated), BookingDTO.class)
         );
     }
 
-    // ✅ CANCEL (OWNER OR ADMIN)
+    // ✅ CANCEL
     @PutMapping("/cancel/{id}")
     public Resp<?> cancel(@PathVariable int id) {
 
         Booking booking = service.getById(id);
 
-        if (!isAdmin() && booking.getUserId() != getUserId()) {
+        if (!isAdmin() && 
+            !booking.getUser().getUserId().equals(getUser().getUserId())) {
             return Resp.error("Unauthorized");
         }
 
         service.cancelBooking(id);
-        return Resp.success("Booking Cancelled Successfully");
+        return Resp.success("Booking Cancelled");
     }
 
-    // ✅ SEARCH (ADMIN ONLY)
+    // ✅ SEARCH (ADMIN)
     @GetMapping("/search")
     public Resp<?> search(@RequestParam String from,
                           @RequestParam String to) {
@@ -140,8 +152,8 @@ public class BookingController {
         }
 
         List<BookingDTO> list = service.searchByDate(
-                        LocalDate.parse(from),
-                        LocalDate.parse(to))
+                LocalDate.parse(from),
+                LocalDate.parse(to))
                 .stream()
                 .map(b -> mapper.map(b, BookingDTO.class))
                 .toList();
@@ -149,15 +161,17 @@ public class BookingController {
         return Resp.success(list);
     }
 
-    // ✅ DELETE (ADMIN ONLY)
+    // ✅ DELETE
     @DeleteMapping("/{id}")
     public Resp<?> delete(@PathVariable int id) {
 
         if (!isAdmin()) {
-            return Resp.error("Only Admin can delete");
+            return Resp.error("Only Admin");
         }
 
         service.deleteBooking(id);
-        return Resp.success("Booking Deleted Successfully");
+        return Resp.success("Deleted Successfully");
     }
+    
+    
 }

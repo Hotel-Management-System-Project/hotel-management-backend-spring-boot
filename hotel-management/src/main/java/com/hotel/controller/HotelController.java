@@ -2,100 +2,50 @@ package com.hotel.controller;
 
 import java.util.List;
 
-import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
-import com.hotel.dto.ApiResponse;
-import com.hotel.dto.HotelRequest;
-import com.hotel.dto.HotelResponse;
+import com.hotel.model.Hotel;
 import com.hotel.service.HotelService;
+import com.hotel.utils.Resp;
 
 @RestController
 @RequestMapping("/api/hotels")
 public class HotelController {
 
-    private final HotelService hotelService;
+    private final HotelService service;
 
-    public HotelController(HotelService hotelService) {
-        this.hotelService = hotelService;
+    public HotelController(HotelService service) {
+        this.service = service;
+    }
+
+    private boolean isAdmin() {
+        return SecurityContextHolder.getContext()
+                .getAuthentication()
+                .getAuthorities()
+                .stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
     }
 
     @PostMapping
-    public ResponseEntity<ApiResponse<HotelResponse>> createHotel(
-            @RequestBody HotelRequest request) {
-
-        return ResponseEntity.ok(
-                new ApiResponse<>(
-                        true,
-                        "Hotel created successfully",
-                        hotelService.createHotel(request)));
+    public Resp<?> add(@RequestBody Hotel hotel) {
+        return Resp.success(service.addHotel(hotel));
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<HotelResponse>>> getAllHotels() {
-
-        return ResponseEntity.ok(
-                new ApiResponse<>(
-                        true,
-                        "Hotels fetched successfully",
-                        hotelService.getAllHotels()));
+    public Resp<List<Hotel>> getAll() {
+        return Resp.success(service.getAll());
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<HotelResponse>> getHotelById(
-            @PathVariable Long id) {
-
-        return ResponseEntity.ok(
-                new ApiResponse<>(
-                        true,
-                        "Hotel found",
-                        hotelService.getHotelById(id)));
+    @PutMapping("/approve/{id}")
+    public Resp<?> approve(@PathVariable Integer id) {
+        if (!isAdmin()) return Resp.error("Only Admin");
+        return Resp.success(service.approve(id));
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<HotelResponse>> updateHotel(
-            @PathVariable Long id,
-            @RequestBody HotelRequest request) {
-
-        return ResponseEntity.ok(
-                new ApiResponse<>(
-                        true,
-                        "Hotel updated successfully",
-                        hotelService.updateHotel(id, request)));
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<Object>> deleteHotel(
-            @PathVariable Long id) {
-
-        hotelService.deleteHotel(id);
-
-        return ResponseEntity.ok(
-                new ApiResponse<>(
-                        true,
-                        "Hotel deleted successfully",
-                        null));
-    }
-
-    @PutMapping("/{id}/approve")
-    public ResponseEntity<ApiResponse<HotelResponse>> approveHotel(
-            @PathVariable Long id) {
-
-        return ResponseEntity.ok(
-                new ApiResponse<>(
-                        true,
-                        "Hotel approved successfully",
-                        hotelService.approveHotel(id)));
-    }
-
-    @PutMapping("/{id}/reject")
-    public ResponseEntity<ApiResponse<HotelResponse>> rejectHotel(
-            @PathVariable Long id) {
-
-        return ResponseEntity.ok(
-                new ApiResponse<>(
-                        true,
-                        "Hotel rejected successfully",
-                        hotelService.rejectHotel(id)));
+    @PutMapping("/reject/{id}")
+    public Resp<?> reject(@PathVariable Integer id) {
+        if (!isAdmin()) return Resp.error("Only Admin");
+        return Resp.success(service.reject(id));
     }
 }
