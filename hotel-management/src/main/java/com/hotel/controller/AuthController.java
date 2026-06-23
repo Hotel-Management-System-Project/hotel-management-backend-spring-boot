@@ -2,17 +2,14 @@ package com.hotel.controller;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
 
 import com.hotel.config.JwtUtil;
 import com.hotel.model.User;
 import com.hotel.service.UserService;
+import com.hotel.utils.Resp;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -28,37 +25,35 @@ public class AuthController {
     }
 
     @PostMapping("/signup")
-    public User signup(@RequestBody User user) {
-        return service.signup(user);
+    public Resp<?> signup(@RequestBody User user) {
+        User saved = service.signup(user);
+        saved.setPassword(null);
+        return Resp.success(saved);
     }
 
     @PostMapping("/login")
-    public Object login(@RequestBody Map<String, String> req) {
+    public Resp<?> login(@RequestBody Map<String, String> req) {
 
-        Optional<User> userOpt = service.findByEmail(req.get("email"));
-
-        if (userOpt.isEmpty()) 
-        	return "Invalid";
-
-        User user = userOpt.get();
+        User user = service.findByEmail(req.get("email"))
+                .orElseThrow(() -> new RuntimeException("Invalid Credentials"));
 
         if (!service.matchPassword(req.get("password"), user.getPassword())) {
-            return "Invalid";
+            return Resp.error("Invalid Credentials");
         }
 
-        String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
+        String token = jwtUtil.generateToken(
+                user.getUserId(),
+                user.getEmail(),
+                user.getRole().name()
+        );
 
-        return Map.of(
+        return Resp.success(Map.of(
                 "token", token,
                 "role", user.getRole(),
                 "email", user.getEmail()
-        );
+        ));
     }
-<<<<<<< Updated upstream
-=======
-   
-    
-    //chenge-pass
+
     @PutMapping("/change-password")
     public Resp<?> changePassword(Authentication authentication,
                                   @RequestBody Map<String, String> req) {
@@ -89,7 +84,6 @@ public class AuthController {
         return Resp.success("Password changed successfully");
     }
 
-    //delete
     @DeleteMapping("/delete-account")
     public Resp<?> deleteAccount(Authentication authentication,
                                  @RequestBody Map<String, String> req) {
@@ -117,8 +111,7 @@ public class AuthController {
 
         return Resp.success("Account deleted successfully");
     }
-    
-//users
+
     @GetMapping("/users")
     public Resp<?> getAllUsers() {
         List<User> users = service.getAllUsers();
@@ -127,7 +120,4 @@ public class AuthController {
 
         return Resp.success(users);
     }
-    
-    
->>>>>>> Stashed changes
 }

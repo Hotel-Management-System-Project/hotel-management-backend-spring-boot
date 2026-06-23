@@ -6,10 +6,9 @@ import java.util.Optional;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.hotel.model.Role;
 import com.hotel.model.User;
 import com.hotel.repository.UserRepository;
-
-
 
 @Service
 public class UserService {
@@ -23,11 +22,16 @@ public class UserService {
     }
 
     public User signup(User user) {
-        user.setPassword(encoder.encode(user.getPassword()));
-    
-        if (user.getRole() == null) {
-            user.setRole(User.Role.CUSTOMER);
+        if (repo.existsByEmail(user.getEmail())) {
+            throw new RuntimeException("Email already exists");
         }
+
+        user.setPassword(encoder.encode(user.getPassword()));
+
+        if (user.getRole() == null) {
+            user.setRole(Role.CUSTOMER);
+        }
+
         return repo.save(user);
     }
 
@@ -35,30 +39,27 @@ public class UserService {
         return repo.findByEmail(email);
     }
 
-    public boolean matchPassword(String raw, String encoded) {
-        return encoder.matches(raw, encoded);
-    }
-<<<<<<< Updated upstream
-=======
-    
-    public String encodePassword(String rawPassword) {
-        return encoder.encode(rawPassword);
-    }
-    
-    public User save(User user) {
-        return repo.save(user);
-    }
     public Optional<User> findById(Integer id) {
         return repo.findById(id);
     }
-    
+
+    public boolean matchPassword(String raw, String encoded) {
+        return encoder.matches(raw, encoded);
+    }
+
+    public String encodePassword(String rawPassword) {
+        return encoder.encode(rawPassword);
+    }
+
+    public User save(User user) {
+        return repo.save(user);
+    }
+
     public List<User> getAllUsers() {
         return repo.findAll();
     }
-    
+
     public void deleteUser(Integer id) {
         repo.deleteById(id);
     }
-    
->>>>>>> Stashed changes
 }

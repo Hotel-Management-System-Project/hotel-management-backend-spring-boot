@@ -10,9 +10,9 @@ import com.hotel.model.Booking;
 
 @Repository
 public interface BookingRepository extends JpaRepository<Booking, Integer> {
-	
-	 List<Booking> findByUserId(int userId);
-	 
-	 List<Booking> findByCheckInDateBetween(LocalDate from, LocalDate to);
-}
 
+    // ✅ FIXED (use relation)
+    List<Booking> findByUser_UserId(Integer userId);
+
+    List<Booking> findByCheckInDateBetween(LocalDate from, LocalDate to);
+}

@@ -9,6 +9,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -24,11 +25,6 @@ public class JwtFilter extends OncePerRequestFilter {
     }
 
     @Override
-<<<<<<< Updated upstream
-    protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain chain)
-=======
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getServletPath();
 
@@ -41,41 +37,35 @@ public class JwtFilter extends OncePerRequestFilter {
             HttpServletRequest request,
             HttpServletResponse response,
             FilterChain chain)
->>>>>>> Stashed changes
             throws ServletException, IOException {
 
-        String path = request.getServletPath();
+        String header = request.getHeader("Authorization");
 
-        // 🔥 VERY IMPORTANT (skip auth APIs)
-        if (path.startsWith("/api/auth")) {
+        if (header == null || !header.startsWith("Bearer ")) {
             chain.doFilter(request, response);
             return;
         }
 
-        String header = request.getHeader("Authorization");
+        String token = header.substring(7);
 
-        if (header != null && header.startsWith("Bearer ")) {
+        try {
+            Claims claims = jwtUtil.extractClaims(token);
 
-            try {
-                String token = header.substring(7);
-                var claims = jwtUtil.extractClaims(token);
+            String email = claims.getSubject();
+            String role = claims.get("role", String.class);
 
-                String email = claims.getSubject();
-                String role = (String) claims.get("role");
+            UsernamePasswordAuthenticationToken authentication =
+                    new UsernamePasswordAuthenticationToken(
+                            email,
+                            null,
+                            List.of(new SimpleGrantedAuthority("ROLE_" + role))
+                    );
 
-                var authorities = java.util.List.of(
-                        new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_" + role)
-                );
+            SecurityContextHolder.getContext().setAuthentication(authentication);
 
-                var authToken = new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
-                        email, null, authorities
-                );
-
-                org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(authToken);
-
-            } catch (Exception e) {
-                // 🔥 avoid breaking request
-            }
+        } catch (Exception e) {
+            System.out.println("JWT ERROR: " + e.getMessage());
+            SecurityContextHolder.clearContext();
         }
 
         chain.doFilter(request, response);
