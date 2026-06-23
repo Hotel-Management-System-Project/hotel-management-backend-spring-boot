@@ -26,7 +26,10 @@ public class JwtFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        return request.getServletPath().startsWith("/api/auth/");
+        String path = request.getServletPath();
+
+        return path.equals("/api/auth/login")
+                || path.equals("/api/auth/signup");
     }
 
     @Override
@@ -46,7 +49,6 @@ public class JwtFilter extends OncePerRequestFilter {
         String token = header.substring(7);
 
         try {
-
             Claims claims = jwtUtil.extractClaims(token);
 
             String email = claims.getSubject();
@@ -54,7 +56,7 @@ public class JwtFilter extends OncePerRequestFilter {
 
             UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(
-                            email, // principal
+                            email,
                             null,
                             List.of(new SimpleGrantedAuthority("ROLE_" + role))
                     );
@@ -62,9 +64,7 @@ public class JwtFilter extends OncePerRequestFilter {
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
         } catch (Exception e) {
-
             System.out.println("JWT ERROR: " + e.getMessage());
-
             SecurityContextHolder.clearContext();
         }
 
