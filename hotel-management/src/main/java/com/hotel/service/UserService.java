@@ -1,5 +1,6 @@
 package com.hotel.service;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -37,4 +38,27 @@ public class UserService {
     public boolean matchPassword(String raw, String encoded) {
         return encoder.matches(raw, encoded);
     }
+<<<<<<< Updated upstream
+=======
+    
+    public String encodePassword(String rawPassword) {
+        return encoder.encode(rawPassword);
+    }
+    
+    public User save(User user) {
+        return repo.save(user);
+    }
+    public Optional<User> findById(Integer id) {
+        return repo.findById(id);
+    }
+    
+    public List<User> getAllUsers() {
+        return repo.findAll();
+    }
+    
+    public void deleteUser(Integer id) {
+        repo.deleteById(id);
+    }
+    
+>>>>>>> Stashed changes
 }

@@ -24,9 +24,24 @@ public class JwtFilter extends OncePerRequestFilter {
     }
 
     @Override
+<<<<<<< Updated upstream
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain chain)
+=======
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getServletPath();
+
+        return path.equals("/api/auth/login")
+                || path.equals("/api/auth/signup");
+    }
+
+    @Override
+    protected void doFilterInternal(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            FilterChain chain)
+>>>>>>> Stashed changes
             throws ServletException, IOException {
 
         String path = request.getServletPath();
