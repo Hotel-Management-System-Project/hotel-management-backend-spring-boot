@@ -30,9 +30,10 @@ public class JwtFilter extends OncePerRequestFilter {
     }
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain chain)
+    protected void doFilterInternal(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            FilterChain chain)
             throws ServletException, IOException {
 
         String header = request.getHeader("Authorization");
@@ -45,22 +46,25 @@ public class JwtFilter extends OncePerRequestFilter {
         String token = header.substring(7);
 
         try {
+
             Claims claims = jwtUtil.extractClaims(token);
 
             String email = claims.getSubject();
             String role = claims.get("role", String.class);
-            Integer userId = claims.get("userId", Integer.class);
 
-            var auth = new UsernamePasswordAuthenticationToken(
-                    userId, // 🔥 IMPORTANT: we use userId as principal
-                    null,
-                    List.of(new SimpleGrantedAuthority("ROLE_" + role))
-            );
+            UsernamePasswordAuthenticationToken authentication =
+                    new UsernamePasswordAuthenticationToken(
+                            email, // principal
+                            null,
+                            List.of(new SimpleGrantedAuthority("ROLE_" + role))
+                    );
 
-            SecurityContextHolder.getContext().setAuthentication(auth);
+            SecurityContextHolder.getContext().setAuthentication(authentication);
 
         } catch (Exception e) {
+
             System.out.println("JWT ERROR: " + e.getMessage());
+
             SecurityContextHolder.clearContext();
         }
 

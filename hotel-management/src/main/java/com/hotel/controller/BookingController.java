@@ -32,15 +32,30 @@ public class BookingController {
     }
 
     // 🔐 Get Logged-in User
+//    private User getUser() {
+//        String email = SecurityContextHolder
+//                .getContext()
+//                .getAuthentication()
+//                .getName();
+//
+//        return userService.findByEmail(email)
+//                .orElseThrow(() -> new RuntimeException("User not found"));
+//    }
+    
     private User getUser() {
+
         String email = SecurityContextHolder
                 .getContext()
                 .getAuthentication()
                 .getName();
 
+        System.out.println("Email from SecurityContext = " + email);
+
         return userService.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
     }
+    
+    
 
     private boolean isAdmin() {
         return SecurityContextHolder.getContext()

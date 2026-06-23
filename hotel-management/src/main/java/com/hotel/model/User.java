@@ -3,6 +3,8 @@ package com.hotel.model;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -46,5 +48,6 @@ public class User {
     private List<Booking> bookings;
 
     @OneToMany(mappedBy = "owner")
+    @JsonIgnore
     private List<Hotel> hotels;
 }

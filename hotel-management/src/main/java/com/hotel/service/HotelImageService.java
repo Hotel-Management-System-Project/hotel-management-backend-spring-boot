@@ -23,4 +23,14 @@ public class HotelImageService {
     public List<HotelImage> getByHotel(Integer hotelId) {
         return repo.findByHotel_HotelId(hotelId);
     }
+
+	public HotelImage getById(Integer id) {
+		// TODO Auto-generated method stub
+		  return repo.findById(id).orElse(null);
+	}
+
+	public void delete(Integer id) {
+		  repo.deleteById(id);
+		
+	}
 }
