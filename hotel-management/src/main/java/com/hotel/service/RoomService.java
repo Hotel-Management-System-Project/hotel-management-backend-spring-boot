@@ -65,7 +65,7 @@ public class RoomService {
     }
 
     // ✅ GET BY ID
-    public RoomResponseDTO findRoomById(int id) {
+    public RoomResponseDTO findRoomById(Integer id) {
 
         Room room = roomRepoRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Room not found"));

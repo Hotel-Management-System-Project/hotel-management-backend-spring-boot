@@ -28,7 +28,7 @@ public class Hotel {
     private String state;
     private String pincode;
 
-    private double rating = 0.0;
+    private Double rating = 0.0;
 
     @Enumerated(EnumType.STRING)
     private Status status;

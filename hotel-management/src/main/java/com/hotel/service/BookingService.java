@@ -35,11 +35,13 @@ public class BookingService {
     }
 
     public Booking updateBooking(int id, Booking updated) {
+
         Booking existing = getById(id);
 
         existing.setCheckInDate(updated.getCheckInDate());
         existing.setCheckOutDate(updated.getCheckOutDate());
         existing.setTotalAmount(updated.getTotalAmount());
+        existing.setStatus(updated.getStatus());
 
         return repo.save(existing);
     }

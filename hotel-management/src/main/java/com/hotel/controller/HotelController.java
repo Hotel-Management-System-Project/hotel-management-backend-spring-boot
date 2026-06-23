@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import com.hotel.dto.HotelRequest;
 import com.hotel.model.Hotel;
 import com.hotel.service.HotelService;
 import com.hotel.utils.Resp;
@@ -28,8 +29,8 @@ public class HotelController {
     }
 
     @PostMapping
-    public Resp<?> add(@RequestBody Hotel hotel) {
-        return Resp.success(service.addHotel(hotel));
+    public Resp<?> add(@RequestBody HotelRequest request) {
+        return Resp.success(service.addHotel(request));
     }
 
     @GetMapping
@@ -39,13 +40,22 @@ public class HotelController {
 
     @PutMapping("/approve/{id}")
     public Resp<?> approve(@PathVariable Integer id) {
-        if (!isAdmin()) return Resp.error("Only Admin");
+        if (!isAdmin())
+            return Resp.error("Only Admin");
+
         return Resp.success(service.approve(id));
     }
 
     @PutMapping("/reject/{id}")
     public Resp<?> reject(@PathVariable Integer id) {
-        if (!isAdmin()) return Resp.error("Only Admin");
+        if (!isAdmin())
+            return Resp.error("Only Admin");
+
         return Resp.success(service.reject(id));
+    }
+    
+    @GetMapping("/{id}")
+    public Resp<Hotel> getById(@PathVariable Integer id) {
+        return Resp.success(service.getById(id));
     }
 }
