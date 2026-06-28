@@ -4,6 +4,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -33,6 +36,7 @@ public class Booking {
 
     // ✅ Correct ManyToOne mapping
     @ManyToOne
+    @JsonBackReference("user-bookings")
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
@@ -52,6 +56,7 @@ public class Booking {
 
     // ✅ Correct OneToMany
     @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL)
+    @JsonManagedReference("booking-bookingrooms")
     private List<BookingRoom> bookingRooms;
 }
 

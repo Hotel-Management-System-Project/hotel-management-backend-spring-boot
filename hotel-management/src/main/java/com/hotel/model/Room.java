@@ -6,7 +6,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -40,7 +42,7 @@ public class Room {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "hotel_id", nullable = false)
-    @JsonIgnore
+    @JsonBackReference("hotel-rooms")
     private Hotel hotel;
 
     @Column(name="room_number", nullable = false)
@@ -67,6 +69,7 @@ public class Room {
     }
 
     @OneToMany(mappedBy = "room", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference("room-bookingrooms")
     private List<BookingRoom> bookingRooms;
 
 	public void setAvailabilityStatus(Boolean availabilityStatus) {

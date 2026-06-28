@@ -3,6 +3,8 @@ package com.hotel.model;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+
 import jakarta.persistence.*;
 import lombok.*;
 @Entity
@@ -45,8 +47,10 @@ public class Hotel {
     }
 
     @OneToMany(mappedBy = "hotel", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference("hotel-rooms")
     private List<Room> rooms;
 
     @OneToMany(mappedBy = "hotel", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference("hotel-images")
     private List<HotelImage> images;
 }
