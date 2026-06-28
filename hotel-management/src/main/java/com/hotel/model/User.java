@@ -4,6 +4,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -28,6 +30,7 @@ public class User {
     private String email;
 
     @Column(nullable = false)
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
 
     private String phone;
@@ -45,6 +48,7 @@ public class User {
     }
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference("user-bookings")
     private List<Booking> bookings;
 
     @OneToMany(mappedBy = "owner")
