@@ -71,9 +71,19 @@ public class Room {
     @OneToMany(mappedBy = "room", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference("room-bookingrooms")
     private List<BookingRoom> bookingRooms;
+    
+    @OneToMany(
+    	    mappedBy = "room",
+    	    cascade = CascadeType.ALL,
+    	    orphanRemoval = true
+    	)
+    	private List<RoomImage> roomImages;
 
-	public void setAvailabilityStatus(Boolean availabilityStatus) {
-		// TODO Auto-generated method stub
-		
-	}
+    public void setAvailabilityStatus(Boolean availabilityStatus) {
+        this.isAvailable = Boolean.TRUE.equals(availabilityStatus);
+    }
+
+    public Boolean getAvailabilityStatus() {
+        return this.isAvailable;
+    }
 }
