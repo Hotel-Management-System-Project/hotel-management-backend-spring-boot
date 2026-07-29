@@ -11,11 +11,14 @@ public class BookingDTO {
 
     private Integer bookingId;
     private Integer userId;
-
+    private String customerName;
+    private String customerEmail;
+    private String customerPhone;
+    private Integer roomId;
+    private Integer roomNumber;
+    private String roomType;
     private LocalDate checkInDate;
     private LocalDate checkOutDate;
-
     private double totalAmount;
-    
     private Status status;
 }

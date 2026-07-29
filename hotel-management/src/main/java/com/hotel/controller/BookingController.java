@@ -9,8 +9,11 @@ import org.springframework.web.bind.annotation.*;
 
 import com.hotel.dto.BookingDTO;
 import com.hotel.model.Booking;
+import com.hotel.model.Hotel;
+import com.hotel.model.Role;
 import com.hotel.model.User;
 import com.hotel.service.BookingService;
+import com.hotel.service.HotelService;
 import com.hotel.service.UserService;
 import com.hotel.utils.Resp;
 
@@ -22,13 +25,16 @@ public class BookingController {
     private final BookingService service;
     private final ModelMapper mapper;
     private final UserService userService;
+    private final HotelService hotelService;
 
     public BookingController(BookingService service,
                              ModelMapper mapper,
-                             UserService userService) {
+                             UserService userService,
+                             HotelService hotelService) {
         this.service = service;
         this.mapper = mapper;
         this.userService = userService;
+        this.hotelService = hotelService;
     }
 
     // 🔐 Get Logged-in User
@@ -63,6 +69,42 @@ public class BookingController {
                 .getAuthorities()
                 .stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+    }
+
+    private boolean isOwner() {
+        return SecurityContextHolder.getContext()
+                .getAuthentication()
+                .getAuthorities()
+                .stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_HOTEL_OWNER"));
+    }
+
+    private BookingDTO toDTO(Booking booking) {
+        BookingDTO dto = mapper.map(booking, BookingDTO.class);
+        if (booking.getUser() != null) {
+            dto.setUserId(booking.getUser().getUserId());
+            dto.setCustomerName(booking.getUser().getFullName());
+            dto.setCustomerEmail(booking.getUser().getEmail());
+            dto.setCustomerPhone(booking.getUser().getPhone());
+        }
+        return dto;
+    }
+
+    private BookingDTO toHotelDTO(Booking booking, Integer hotelId) {
+        BookingDTO dto = toDTO(booking);
+        if (booking.getBookingRooms() != null) {
+            booking.getBookingRooms().stream()
+                    .filter(br -> br.getRoom() != null
+                            && br.getRoom().getHotel() != null
+                            && br.getRoom().getHotel().getHotelId().equals(hotelId))
+                    .findFirst()
+                    .ifPresent(br -> {
+                        dto.setRoomId(br.getRoom().getRoomId());
+                        dto.setRoomNumber(br.getRoom().getRoomNumber());
+                        dto.setRoomType(br.getRoom().getRoomType());
+                    });
+        }
+        return dto;
     }
 
     // ✅ CREATE BOOKING
@@ -104,6 +146,31 @@ public class BookingController {
         List<BookingDTO> list = service.getAllBookings()
                 .stream()
                 .map(b -> mapper.map(b, BookingDTO.class))
+                .toList();
+
+        return Resp.success(list);
+    }
+
+    @GetMapping("/hotel/{hotelId}")
+    public Resp<?> getByHotel(@PathVariable Integer hotelId) {
+        User loggedInUser = getUser();
+        boolean admin = loggedInUser.getRole() == Role.ADMIN;
+        boolean owner = loggedInUser.getRole() == Role.HOTEL_OWNER;
+
+        if (!admin && !owner) {
+            return Resp.error("Access denied");
+        }
+
+        Hotel hotel = hotelService.getById(hotelId);
+        if (!admin
+                && (hotel.getOwner() == null
+                || !hotel.getOwner().getUserId().equals(loggedInUser.getUserId()))) {
+            return Resp.error("You can view bookings only for your own hotel");
+        }
+
+        List<BookingDTO> list = service.getHotelBookings(hotelId)
+                .stream()
+                .map(booking -> toHotelDTO(booking, hotelId))
                 .toList();
 
         return Resp.success(list);

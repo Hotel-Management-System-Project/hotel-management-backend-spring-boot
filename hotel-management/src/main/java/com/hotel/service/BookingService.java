@@ -2,10 +2,12 @@ package com.hotel.service;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 
 import com.hotel.model.Booking;
+import com.hotel.model.User;
 import com.hotel.repository.BookingRepository;
 
 @Service
@@ -59,4 +61,10 @@ public class BookingService {
     public void deleteBooking(int id) {
         repo.deleteById(id);
     }
+
+	
+	public Optional<Booking> getHotelBookings(Integer hotelId) {
+	    return repo.findById(hotelId);
+	}
+    
 }

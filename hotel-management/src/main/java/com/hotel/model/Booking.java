@@ -58,5 +58,6 @@ public class Booking {
     @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL)
     @JsonManagedReference("booking-bookingrooms")
     private List<BookingRoom> bookingRooms;
+    
 }
 
