@@ -16,15 +16,20 @@ public interface BookingRoomRepository extends JpaRepository<BookingRoom, Intege
 
     List<BookingRoom> findByBooking(Booking booking);
 
+   
+    
+    
     @Query("""
     	    SELECT br FROM BookingRoom br
     	    WHERE br.room = :room
-    	    AND br.booking.checkInDate < :checkOut
-    	    AND br.booking.checkOutDate > :checkIn
+	    	AND br.booking.checkInDate < :checkOut
+	    	AND br.booking.checkOutDate > :checkIn
+	    	AND br.booking.status = :status
     	""")
     	List<BookingRoom> findConflictingBookings(
     	        @Param("room") Room room,
-    	        @Param("checkIn") LocalDate checkIn,
-    	        @Param("checkOut") LocalDate checkOut
-    	);
+	        @Param("checkIn") LocalDate checkIn,
+	        @Param("checkOut") LocalDate checkOut,
+	        @Param("status") Booking.Status status
+	    	);
 }

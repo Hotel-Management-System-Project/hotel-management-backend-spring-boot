@@ -25,16 +25,27 @@ public class HotelService {
         this.userRepository = userRepository;
     }
 
-    // Add a new hotel
+    @Transactional
     public Hotel addHotel(HotelRequest request) {
+
+        if (request == null) {
+            throw new RuntimeException(
+                    "Hotel information is required"
+            );
+        }
+
         if (request.getOwnerId() == null) {
-            throw new RuntimeException("Owner id is required");
+            throw new RuntimeException(
+                    "Hotel owner ID is required"
+            );
         }
 
         User owner = userRepository
                 .findById(request.getOwnerId())
                 .orElseThrow(() ->
-                        new RuntimeException("Owner not found")
+                    new RuntimeException(
+                        "Hotel owner not found"
+                    )
                 );
 
         Hotel hotel = new Hotel();
@@ -47,12 +58,111 @@ public class HotelService {
         hotel.setState(request.getState());
         hotel.setPincode(request.getPincode());
 
-        if (request.getRating() != null) {
-            hotel.setRating(
-                    request.getRating().doubleValue()
+        /*
+         * Do not accept rating during hotel registration.
+         * Customer reviews should determine the rating later.
+         */
+        hotel.setRating(0.0);
+
+        /*
+         * The hotel remains private while compulsory rooms
+         * and images are being added.
+         */
+        hotel.setStatus(Hotel.Status.DRAFT);
+
+        return hotelRepository.save(hotel);
+    }
+
+    public Hotel getById(Integer hotelId) {
+        return hotelRepository
+                .findById(hotelId)
+                .orElseThrow(() ->
+                    new RuntimeException("Hotel not found")
+                );
+    }
+
+    public List<Hotel> getAll() {
+        return hotelRepository.findAll();
+    }
+
+    public List<Hotel> getVisibleHotels(
+            String email,
+            boolean isAdmin,
+            boolean isOwner
+    ) {
+        if (isOwner) {
+            User owner = userRepository
+                    .findByEmail(email)
+                    .orElseThrow(() ->
+                        new RuntimeException("Owner not found")
+                    );
+
+            return hotelRepository
+                    .findByOwner_UserId(
+                        owner.getUserId()
+                    );
+        }
+
+        if (isAdmin) {
+            /*
+             * Administrators see submitted requests,
+             * but not incomplete drafts.
+             */
+            return hotelRepository
+                    .findAll()
+                    .stream()
+                    .filter(hotel ->
+                        hotel.getStatus()
+                                != Hotel.Status.DRAFT
+                    )
+                    .toList();
+        }
+
+        /*
+         * Customers see approved hotels only.
+         */
+        return hotelRepository
+                .findAll()
+                .stream()
+                .filter(hotel ->
+                    hotel.getStatus()
+                            == Hotel.Status.APPROVED
+                )
+                .toList();
+    }
+
+    @Transactional
+    public Hotel submitForApproval(
+            Integer hotelId,
+            String requesterEmail
+    ) {
+        Hotel hotel = getById(hotelId);
+
+        if (hotel.getOwner() == null
+                || !hotel.getOwner()
+                    .getEmail()
+                    .equalsIgnoreCase(requesterEmail)) {
+
+            throw new RuntimeException(
+                    "You can submit only your own hotel"
             );
-        } else {
-            hotel.setRating(0.0);
+        }
+
+        if (hotel.getStatus() != Hotel.Status.DRAFT
+                && hotel.getStatus()
+                        != Hotel.Status.REJECTED) {
+
+            throw new RuntimeException(
+                    "This hotel has already been submitted"
+            );
+        }
+
+        if (hotel.getRooms() == null
+                || hotel.getRooms().isEmpty()) {
+
+            throw new RuntimeException(
+                    "Add at least one room before submitting the hotel"
+            );
         }
 
         hotel.setStatus(Hotel.Status.PENDING);
@@ -60,86 +170,56 @@ public class HotelService {
         return hotelRepository.save(hotel);
     }
 
-    // Get all hotels
-    @Transactional(readOnly = true)
-    public List<Hotel> getAll() {
-        return hotelRepository.findAll();
-    }
-
-    // Get hotels belonging to one owner
-    @Transactional(readOnly = true)
-    public List<Hotel> getByOwner(Integer ownerId) {
-        return hotelRepository
-                .findByOwner_UserId(ownerId);
-    }
-
-    // Get hotel by ID
-    @Transactional(readOnly = true)
-    public Hotel getById(Integer hotelId) {
-        return hotelRepository
-                .findById(hotelId)
-                .orElseThrow(() ->
-                        new RuntimeException("Hotel not found")
-                );
-    }
-
-    // Approve hotel
     @Transactional
     public Hotel approve(Integer hotelId) {
         Hotel hotel = getById(hotelId);
+
+        if (hotel.getStatus() != Hotel.Status.PENDING) {
+            throw new RuntimeException(
+                    "Only a pending hotel can be approved"
+            );
+        }
 
         hotel.setStatus(Hotel.Status.APPROVED);
 
         return hotelRepository.save(hotel);
     }
 
-    // Reject hotel
     @Transactional
     public Hotel reject(Integer hotelId) {
         Hotel hotel = getById(hotelId);
+
+        if (hotel.getStatus() != Hotel.Status.PENDING) {
+            throw new RuntimeException(
+                    "Only a pending hotel can be rejected"
+            );
+        }
 
         hotel.setStatus(Hotel.Status.REJECTED);
 
         return hotelRepository.save(hotel);
     }
 
-    // Delete hotel
     @Transactional
     public void deleteHotel(
             Integer hotelId,
             String requesterEmail,
-            boolean admin
+            boolean isAdmin
     ) {
-        Hotel hotel = hotelRepository
-                .findById(hotelId)
-                .orElseThrow(() ->
-                        new RuntimeException("Hotel not found")
-                );
+        Hotel hotel = getById(hotelId);
 
-        if (!admin) {
-            if (hotel.getOwner() == null) {
-                throw new RuntimeException(
-                        "Hotel owner information is missing"
-                );
-            }
-
-            if (!hotel.getOwner()
+        boolean isOwner =
+                hotel.getOwner() != null
+                && hotel.getOwner()
                     .getEmail()
-                    .equalsIgnoreCase(requesterEmail)) {
+                    .equalsIgnoreCase(requesterEmail);
 
-                throw new RuntimeException(
-                        "You can delete only your own hotel"
-                );
-            }
+        if (!isAdmin && !isOwner) {
+            throw new RuntimeException(
+                    "You can delete only your own hotel"
+            );
         }
 
-        /*
-         * Hotel entity should cascade deletion to:
-         * - hotel images
-         * - rooms
-         * - room images
-         * - booking-room relationships
-         */
         hotelRepository.delete(hotel);
     }
 }

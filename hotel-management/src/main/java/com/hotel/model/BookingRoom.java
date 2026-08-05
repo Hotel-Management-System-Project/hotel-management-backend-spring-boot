@@ -1,7 +1,5 @@
 package com.hotel.model;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
-
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -28,12 +26,10 @@ public class BookingRoom {
 	 
 	 @ManyToOne
 	 @JoinColumn(name = "booking_id")
-	 @JsonBackReference("booking-bookingrooms")
 	 private Booking booking;
 
 	 @ManyToOne
 	 @JoinColumn(name = "room_id")
-	 @JsonBackReference("room-bookingrooms")
 	 private Room room;
 	 
 	 

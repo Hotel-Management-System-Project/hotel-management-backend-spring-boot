@@ -62,6 +62,15 @@ public class Room {
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
+    
+    @Column(name = "air_conditioned", nullable = false)
+    private Boolean airConditioned = false;
+
+    @Column(name = "has_wifi", nullable = false)
+    private Boolean hasWifi = true;
+
+    @Column(name = "has_tv", nullable = false)
+    private Boolean hasTv = false;
 
     @PrePersist
     public void prePersist() {
@@ -77,6 +86,7 @@ public class Room {
     	    cascade = CascadeType.ALL,
     	    orphanRemoval = true
     	)
+    	@JsonManagedReference("room-images")
     	private List<RoomImage> roomImages;
 
     public void setAvailabilityStatus(Boolean availabilityStatus) {
@@ -86,4 +96,6 @@ public class Room {
     public Boolean getAvailabilityStatus() {
         return this.isAvailable;
     }
+    
+  
 }

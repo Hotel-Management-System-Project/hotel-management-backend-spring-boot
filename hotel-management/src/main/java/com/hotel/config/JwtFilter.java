@@ -3,9 +3,14 @@ package com.hotel.config;
 import java.io.IOException;
 import java.util.List;
 
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.security.authentication
+        .UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority
+        .SimpleGrantedAuthority;
+import org.springframework.security.core.context
+        .SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -25,28 +30,53 @@ public class JwtFilter extends OncePerRequestFilter {
     }
 
     @Override
-    protected boolean shouldNotFilter(HttpServletRequest request) {
+    protected boolean shouldNotFilter(
+            HttpServletRequest request
+    ) {
         String path = request.getServletPath();
 
-        return path.equals("/api/auth/login")
-                || path.equals("/api/auth/signup");
+        return path.startsWith("/api/auth/")
+                || HttpMethod.OPTIONS.matches(request.getMethod());
     }
 
     @Override
     protected void doFilterInternal(
             HttpServletRequest request,
             HttpServletResponse response,
-            FilterChain chain)
-            throws ServletException, IOException {
+            FilterChain filterChain
+    ) throws ServletException, IOException {
 
-        String header = request.getHeader("Authorization");
+        String authorizationHeader =
+                request.getHeader("Authorization");
 
-        if (header == null || !header.startsWith("Bearer ")) {
-            chain.doFilter(request, response);
+        if (authorizationHeader == null
+                || !authorizationHeader.startsWith("Bearer ")) {
+
+            System.out.println(
+                    "JWT MISSING: "
+                    + request.getMethod()
+                    + " "
+                    + request.getRequestURI()
+            );
+
+            sendUnauthorized(
+                    response,
+                    "Authorization token is missing"
+            );
             return;
         }
 
-        String token = header.substring(7);
+        String token = authorizationHeader
+                .substring(7)
+                .trim();
+
+        if (token.isBlank()) {
+            sendUnauthorized(
+                    response,
+                    "Authorization token is empty"
+            );
+            return;
+        }
 
         try {
             Claims claims = jwtUtil.extractClaims(token);
@@ -54,20 +84,79 @@ public class JwtFilter extends OncePerRequestFilter {
             String email = claims.getSubject();
             String role = claims.get("role", String.class);
 
+            if (email == null || email.isBlank()) {
+                throw new RuntimeException(
+                        "JWT email claim is missing"
+                );
+            }
+
+            if (role == null || role.isBlank()) {
+                throw new RuntimeException(
+                        "JWT role claim is missing"
+                );
+            }
+
+            String authority = role.startsWith("ROLE_")
+                    ? role
+                    : "ROLE_" + role;
+
             UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(
                             email,
                             null,
-                            List.of(new SimpleGrantedAuthority("ROLE_" + role))
+                            List.of(
+                                    new SimpleGrantedAuthority(authority)
+                            )
                     );
 
-            SecurityContextHolder.getContext().setAuthentication(authentication);
+            SecurityContextHolder
+                    .getContext()
+                    .setAuthentication(authentication);
 
-        } catch (Exception e) {
-            System.out.println("JWT ERROR: " + e.getMessage());
+            System.out.println(
+                    "JWT authenticated: "
+                    + email
+                    + " - "
+                    + authority
+                    + " - "
+                    + request.getMethod()
+                    + " "
+                    + request.getRequestURI()
+            );
+
+            filterChain.doFilter(request, response);
+
+        } catch (Exception exception) {
             SecurityContextHolder.clearContext();
-        }
 
-        chain.doFilter(request, response);
+            System.out.println(
+                    "JWT ERROR: "
+                    + exception.getMessage()
+                    + " - "
+                    + request.getMethod()
+                    + " "
+                    + request.getRequestURI()
+            );
+
+            sendUnauthorized(
+                    response,
+                    "Invalid or expired authentication token"
+            );
+        }
+    }
+
+    private void sendUnauthorized(
+            HttpServletResponse response,
+            String message
+    ) throws IOException {
+
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+
+        response.getWriter().write(
+                "{\"status\":\"error\",\"message\":\""
+                + message
+                + "\"}"
+        );
     }
 }

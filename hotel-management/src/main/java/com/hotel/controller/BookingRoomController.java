@@ -1,8 +1,10 @@
 package com.hotel.controller;
 
+import java.time.LocalDate;
 import java.util.List;
 
-import org.modelmapper.ModelMapper;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,168 +24,324 @@ import com.hotel.utils.Resp;
 @CrossOrigin("*")
 public class BookingRoomController {
 
-    private final BookingRoomService service;
+    private final BookingRoomService bookingRoomService;
     private final BookingService bookingService;
     private final RoomService roomService;
     private final UserService userService;
 
-    public BookingRoomController(BookingRoomService service,
-                                 BookingService bookingService,
-                                 RoomService roomService,
-                                 UserService userService) {
-        this.service = service;
+    public BookingRoomController(
+            BookingRoomService bookingRoomService,
+            BookingService bookingService,
+            RoomService roomService,
+            UserService userService
+    ) {
+        this.bookingRoomService = bookingRoomService;
         this.bookingService = bookingService;
         this.roomService = roomService;
         this.userService = userService;
     }
 
-    // 🔐 Get User
-    private User getUser() {
-        String email = SecurityContextHolder
+    /*
+     * Returns the currently authenticated user.
+     */
+    private User getCurrentUser() {
+        Authentication authentication = SecurityContextHolder
                 .getContext()
-                .getAuthentication()
-                .getName();
+                .getAuthentication();
 
-        return userService.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        if (authentication == null ||
+                !authentication.isAuthenticated() ||
+                "anonymousUser".equals(authentication.getName())) {
+            throw new RuntimeException("Unauthorized");
+        }
+
+        return userService.findByEmail(authentication.getName())
+                .orElseThrow(() ->
+                        new RuntimeException("User not found"));
     }
 
+    /*
+     * Checks whether the current authenticated user is an administrator.
+     */
     private boolean isAdmin() {
-        return SecurityContextHolder.getContext()
-                .getAuthentication()
-                .getAuthorities()
+        Authentication authentication = SecurityContextHolder
+                .getContext()
+                .getAuthentication();
+
+        if (authentication == null) {
+            return false;
+        }
+
+        return authentication.getAuthorities()
                 .stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+                .anyMatch(authority ->
+                        authority.getAuthority()
+                                .equals("ROLE_ADMIN"));
     }
 
-    // ✅ DTO Mapper
-    private BookingRoomDTO convertToDTO(BookingRoom br) {
+    /*
+     * Converts the BookingRoom entity into a safe response DTO.
+     */
+    private BookingRoomDTO convertToDTO(BookingRoom bookingRoom) {
         BookingRoomDTO dto = new BookingRoomDTO();
-        dto.setBookingRoomId(br.getBookingRoomId());
-        dto.setBookingId(br.getBooking().getBookingId());
-        dto.setRoomId(br.getRoom().getRoomId());
-        dto.setPricePerNight(br.getPricePerNight());
+
+        dto.setBookingRoomId(
+                bookingRoom.getBookingRoomId()
+        );
+
+        dto.setBookingId(
+                bookingRoom.getBooking().getBookingId()
+        );
+
+        dto.setRoomId(
+                bookingRoom.getRoom().getRoomId()
+        );
+
+        dto.setPricePerNight(
+                bookingRoom.getPricePerNight()
+        );
+
         return dto;
     }
 
-    // ✅ ADD ROOM
+    /*
+     * Connects a room to a booking.
+     *
+     * BookingRoomService checks availability again while holding
+     * a database lock. This prevents simultaneous double bookings.
+     */
     @PostMapping
-    public Resp<?> add(@RequestBody BookingRoomDTO dto) {
+    public Resp<?> addRoomToBooking(
+            @RequestBody BookingRoomDTO dto
+    ) {
+        User currentUser = getCurrentUser();
 
-        User user = getUser();
-        Booking booking = bookingService.getById(dto.getBookingId());
+        Booking booking = bookingService.getById(
+                dto.getBookingId()
+        );
 
-        if (!isAdmin() &&
-            !booking.getUser().getUserId().equals(user.getUserId())) {
+        boolean ownsBooking =
+                booking.getUser() != null &&
+                booking.getUser().getUserId()
+                        .equals(currentUser.getUserId());
+
+        if (!isAdmin() && !ownsBooking) {
             return Resp.error("Unauthorized");
         }
 
-        Room room = roomService.getRoomEntityById(dto.getRoomId());
+        Room room = roomService.getRoomEntityById(
+                dto.getRoomId()
+        );
 
-        BookingRoom br = new BookingRoom();
-        br.setBooking(booking);
-        br.setRoom(room);
-        br.setPricePerNight(dto.getPricePerNight());
+        BookingRoom bookingRoom = new BookingRoom();
+        bookingRoom.setBooking(booking);
+        bookingRoom.setRoom(room);
+        bookingRoom.setPricePerNight(
+                dto.getPricePerNight()
+        );
 
-        return Resp.success(convertToDTO(service.addRoomToBooking(br)));
+        BookingRoom saved =
+                bookingRoomService.addRoomToBooking(
+                        bookingRoom
+                );
+
+        return Resp.success(convertToDTO(saved));
     }
 
-    // ✅ CHECK AVAILABILITY
- // ONLY CHANGE THIS METHOD
-
+    /*
+     * Checks room availability using an existing booking.
+     *
+     * Example:
+     * GET /api/booking-rooms/check?roomId=10&bookingId=5
+     */
     @GetMapping("/check")
-    public Resp<?> check(@RequestParam int roomId,
-                         @RequestParam int bookingId) {
+    public Resp<?> checkUsingBooking(
+            @RequestParam int roomId,
+            @RequestParam int bookingId
+    ) {
+        User currentUser = getCurrentUser();
 
-        User user = getUser();
         Booking booking = bookingService.getById(bookingId);
 
-        if (!isAdmin() &&
-            !booking.getUser().getUserId().equals(user.getUserId())) {
+        boolean ownsBooking =
+                booking.getUser() != null &&
+                booking.getUser().getUserId()
+                        .equals(currentUser.getUserId());
+
+        if (!isAdmin() && !ownsBooking) {
             return Resp.error("Unauthorized");
         }
 
-        // ✅ FIX: fetch entity
         Room room = roomService.getRoomEntityById(roomId);
 
-        return Resp.success(
-            service.isRoomAvailable(room, booking)
-        );
+        boolean available =
+                bookingRoomService.isRoomAvailable(
+                        room,
+                        booking
+                );
+
+        return Resp.success(available);
     }
-    
 
-    // ✅ GET ROOMS
+    /*
+     * Checks availability before creating a booking.
+     *
+     * Example:
+     * GET /api/booking-rooms/availability
+     *     ?roomId=10
+     *     &checkIn=2026-08-05
+     *     &checkOut=2026-08-07
+     */
+    @GetMapping("/availability")
+    public Resp<?> checkAvailability(
+            @RequestParam int roomId,
+
+            @RequestParam
+            @DateTimeFormat(
+                    iso = DateTimeFormat.ISO.DATE
+            )
+            LocalDate checkIn,
+
+            @RequestParam
+            @DateTimeFormat(
+                    iso = DateTimeFormat.ISO.DATE
+            )
+            LocalDate checkOut
+    ) {
+        // Confirms that this request comes from a logged-in user.
+        getCurrentUser();
+
+        Room room = roomService.getRoomEntityById(roomId);
+
+        boolean available =
+                bookingRoomService.isRoomAvailable(
+                        room,
+                        checkIn,
+                        checkOut
+                );
+
+        return Resp.success(available);
+    }
+
+    /*
+     * Returns rooms connected to a particular booking.
+     */
     @GetMapping("/{bookingId}")
-    public Resp<?> getByBooking(@PathVariable int bookingId) {
+    public Resp<?> getRoomsByBooking(
+            @PathVariable int bookingId
+    ) {
+        User currentUser = getCurrentUser();
 
-        User user = getUser();
         Booking booking = bookingService.getById(bookingId);
 
-        if (!isAdmin() &&
-            !booking.getUser().getUserId().equals(user.getUserId())) {
+        boolean ownsBooking =
+                booking.getUser() != null &&
+                booking.getUser().getUserId()
+                        .equals(currentUser.getUserId());
+
+        if (!isAdmin() && !ownsBooking) {
             return Resp.error("Unauthorized");
         }
 
-        List<BookingRoomDTO> list = service.getRoomsByBooking(bookingId)
-                .stream()
-                .map(this::convertToDTO)
-                .toList();
+        List<BookingRoomDTO> rooms =
+                bookingRoomService
+                        .getRoomsByBooking(bookingId)
+                        .stream()
+                        .map(this::convertToDTO)
+                        .toList();
 
-        return Resp.success(list);
+        return Resp.success(rooms);
     }
 
-    // ✅ ADMIN
+    /*
+     * Returns every booking-room record.
+     * Only an administrator can use this endpoint.
+     */
     @GetMapping
     public Resp<?> getAll() {
+        getCurrentUser();
 
         if (!isAdmin()) {
-            return Resp.error("Only Admin");
+            return Resp.error(
+                    "Only administrators can access this resource"
+            );
         }
+
+        List<BookingRoomDTO> bookingRooms =
+                bookingRoomService.getAll()
+                        .stream()
+                        .map(this::convertToDTO)
+                        .toList();
+
+        return Resp.success(bookingRooms);
+    }
+
+    /*
+     * Updates the saved room price in a booking.
+     */
+    @PutMapping("/{bookingRoomId}")
+    public Resp<?> update(
+            @PathVariable int bookingRoomId,
+            @RequestBody BookingRoomDTO dto
+    ) {
+        User currentUser = getCurrentUser();
+
+        Booking booking = bookingService.getById(
+                dto.getBookingId()
+        );
+
+        boolean ownsBooking =
+                booking.getUser() != null &&
+                booking.getUser().getUserId()
+                        .equals(currentUser.getUserId());
+
+        if (!isAdmin() && !ownsBooking) {
+            return Resp.error("Unauthorized");
+        }
+
+        BookingRoom updated = new BookingRoom();
+        updated.setPricePerNight(
+                dto.getPricePerNight()
+        );
+
+        BookingRoom saved =
+                bookingRoomService.update(
+                        bookingRoomId,
+                        updated
+                );
+
+        return Resp.success(convertToDTO(saved));
+    }
+
+    /*
+     * Removes a room from a booking.
+     */
+    @DeleteMapping("/{bookingRoomId}")
+    public Resp<?> delete(
+            @PathVariable int bookingRoomId
+    ) {
+        BookingRoom bookingRoom =
+                bookingRoomService.getById(
+                        bookingRoomId
+                );
+
+        User currentUser = getCurrentUser();
+
+        boolean ownsBooking =
+                bookingRoom.getBooking().getUser() != null &&
+                bookingRoom.getBooking()
+                        .getUser()
+                        .getUserId()
+                        .equals(currentUser.getUserId());
+
+        if (!isAdmin() && !ownsBooking) {
+            return Resp.error("Unauthorized");
+        }
+
+        bookingRoomService.removeRoom(bookingRoomId);
 
         return Resp.success(
-                service.getAll().stream()
-                        .map(this::convertToDTO)
-                        .toList()
+                "Room removed from booking successfully"
         );
     }
-
-    // ✅ UPDATE
-    @PutMapping("/{id}")
-    public Resp<?> update(@PathVariable int id,
-                          @RequestBody BookingRoomDTO dto) {
-
-        User user = getUser();
-        Booking booking = bookingService.getById(dto.getBookingId());
-
-        if (!isAdmin() &&
-            !booking.getUser().getUserId().equals(user.getUserId())) {
-            return Resp.error("Unauthorized");
-        }
-
-        Room room = roomService.getRoomEntityById(dto.getRoomId());
-
-        BookingRoom br = new BookingRoom();
-        br.setBooking(booking);
-        br.setRoom(room);
-        br.setPricePerNight(dto.getPricePerNight());
-
-        return Resp.success(convertToDTO(service.update(id, br)));
-    }
-
-    // ✅ DELETE
-    @DeleteMapping("/{id}")
-    public Resp<?> delete(@PathVariable int id) {
-
-        BookingRoom br = service.getById(id);
-        User user = getUser();
-
-        if (!isAdmin() &&
-            !br.getBooking().getUser().getUserId().equals(user.getUserId())) {
-            return Resp.error("Unauthorized");
-        }
-
-        service.removeRoom(id);
-        return Resp.success("Room removed from booking");
-    }
-
 }

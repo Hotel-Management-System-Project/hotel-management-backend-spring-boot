@@ -28,8 +28,31 @@ public class HotelImageController {
         this.service = service;
     }
 
+    private boolean isValidImageUrl(String imageUrl) {
+        if (imageUrl == null || imageUrl.isBlank()) {
+            return false;
+        }
+
+        try {
+            java.net.URI uri = java.net.URI.create(imageUrl.trim());
+            String scheme = uri.getScheme();
+            return uri.getHost() != null
+                    && ("http".equalsIgnoreCase(scheme)
+                    || "https".equalsIgnoreCase(scheme));
+        } catch (IllegalArgumentException exception) {
+            return false;
+        }
+    }
+
     @PostMapping
     public Resp<?> add(@RequestBody HotelImageRequestDTO dto) {
+        if (dto.getHotelId() == null) {
+            return Resp.error("Hotel id is required");
+        }
+
+        if (!isValidImageUrl(dto.getImageUrl())) {
+            return Resp.error("A valid HTTP or HTTPS image URL is required");
+        }
 
         HotelImage img = new HotelImage();
 
@@ -37,7 +60,7 @@ public class HotelImageController {
         hotel.setHotelId(dto.getHotelId());
 
         img.setHotel(hotel);
-        img.setImageUrl(dto.getImageUrl());
+        img.setImageUrl(dto.getImageUrl().trim());
 
         return Resp.success(service.add(img));
     }
@@ -65,8 +88,12 @@ public class HotelImageController {
             return Resp.error("Image not found");
         }
 
+        if (!isValidImageUrl(dto.getImageUrl())) {
+            return Resp.error("A valid HTTP or HTTPS image URL is required");
+        }
+
         // update fields
-        img.setImageUrl(dto.getImageUrl());
+        img.setImageUrl(dto.getImageUrl().trim());
 
         if (dto.getHotelId() != null) {
             Hotel hotel = new Hotel();

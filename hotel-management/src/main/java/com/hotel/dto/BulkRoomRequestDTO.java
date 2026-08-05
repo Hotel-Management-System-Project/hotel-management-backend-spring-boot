@@ -3,6 +3,7 @@ package com.hotel.dto;
 import java.math.BigDecimal;
 
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -11,46 +12,45 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * Creates several rooms with shared details and sequential room numbers.
+ * Example: startRoomNumber 101 and quantity 100 creates rooms 101 through 200.
+ */
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Data
-public class RoomRequestDTO {
+public class BulkRoomRequestDTO {
 
-    @NotNull(message = "Hotel ID is required")
+    @NotNull
     private Integer hotelId;
 
-    @NotNull(message = "Room number is required")
-    private Integer roomNumber;
+    @NotNull
+    @Min(1)
+    private Integer startRoomNumber;
 
-    @NotBlank(message = "Room type cannot be blank")
-    @Size(
-        max = 50,
-        message = "Room type must not exceed 50 characters"
-    )
+    @NotNull
+    @Min(value = 1, message = "Create at least one room")
+    @Max(value = 100, message = "A maximum of 100 rooms can be created at once")
+    private Integer quantity;
+
+    @NotBlank
+    @Size(max = 50)
     private String roomType;
 
-    @NotNull(message = "Price per night is required")
-    @DecimalMin(
-        value = "0.0",
-        inclusive = false,
-        message = "Price per night must be greater than 0"
-    )
+    @NotNull
+    @DecimalMin(value = "0.0", inclusive = false)
     private BigDecimal pricePerNight;
 
-    @NotNull(message = "Capacity is required")
-    @Min(
-        value = 1,
-        message = "Capacity must be at least 1"
-    )
+    @NotNull
+    @Min(1)
     private Integer capacity;
 
-    @NotNull(message = "Availability status is required")
+    @NotNull
     private Boolean availabilityStatus;
-
+    
     @NotNull(message = "Select AC or Non-AC")
     private Boolean airConditioned;
 
-    // Every room includes Wi-Fi unless explicitly disabled.
     private Boolean hasWifi = true;
 
     @NotNull(message = "Select TV or No TV")
