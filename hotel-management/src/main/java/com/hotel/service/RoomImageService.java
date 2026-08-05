@@ -12,9 +12,7 @@ public class RoomImageService {
 
     private final RoomImageRepository repository;
 
-    public RoomImageService(
-            RoomImageRepository repository
-    ) {
+    public RoomImageService(RoomImageRepository repository) {
         this.repository = repository;
     }
 
@@ -23,17 +21,12 @@ public class RoomImageService {
     }
 
     public List<RoomImage> getByRoom(Integer roomId) {
-        return repository
-                .findByRoom_RoomIdOrderByImageIdAsc(roomId);
+        return repository.findByRoom_RoomIdOrderByImageIdAsc(roomId);
     }
 
     public RoomImage getById(Integer imageId) {
         return repository.findById(imageId)
-                .orElseThrow(() ->
-                        new RuntimeException(
-                                "Room image not found"
-                        )
-                );
+                .orElseThrow(() -> new RuntimeException("Room image not found"));
     }
 
     public void delete(Integer imageId) {

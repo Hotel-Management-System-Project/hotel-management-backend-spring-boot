@@ -11,9 +11,11 @@
 	import org.springframework.web.bind.annotation.PutMapping;
 	import org.springframework.web.bind.annotation.RequestBody;
 	import org.springframework.web.bind.annotation.RestController;
+	import org.springframework.security.core.Authentication;
 	
 	import com.hotel.dto.RoomRequestDTO;
 	import com.hotel.dto.RoomResponseDTO;
+	import com.hotel.dto.BulkRoomRequestDTO;
 	import com.hotel.service.RoomService;
 	import com.hotel.utils.Resp;
 	
@@ -34,6 +36,21 @@
 			System.out.println("Inside addRoom");
 	//		System.out.println("Response" + response);
 			return Resp.success(response);
+		}
+
+		@PostMapping("/addRoomsBulk")
+		public Resp<List<RoomResponseDTO>> addRoomsBulk(
+				@Valid @RequestBody BulkRoomRequestDTO dto,
+				Authentication authentication) {
+			if (authentication == null) {
+				return Resp.error("Unauthorized");
+			}
+
+			boolean isAdmin = authentication.getAuthorities().stream()
+					.anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+			return Resp.success(roomService.addRoomsInBulk(
+					dto, authentication.getName(), isAdmin
+			));
 		}
 	
 		
@@ -91,14 +108,35 @@
 		@PutMapping("/updateById/{id}")
 		public Resp<RoomResponseDTO> updateRoomById(
 		        @PathVariable Integer id,
-		        @Valid @RequestBody RoomRequestDTO dto) {
-	
+		        @Valid @RequestBody RoomRequestDTO dto,
+		        Authentication authentication
+		) {
+		    if (authentication == null
+		            || !authentication.isAuthenticated()) {
+		        return Resp.error("Unauthorized");
+		    }
+
+		    boolean allowed = authentication
+		            .getAuthorities()
+		            .stream()
+		            .anyMatch(authority ->
+		                authority.getAuthority()
+		                        .equals("ROLE_HOTEL_OWNER")
+		                || authority.getAuthority()
+		                        .equals("ROLE_ADMIN")
+		            );
+
+		    if (!allowed) {
+		        return Resp.error(
+		            "Only hotel owners and administrators can update rooms"
+		        );
+		    }
+
 		    RoomResponseDTO updatedRoom =
 		            roomService.updateRoomById(id, dto);
-	
+
 		    return Resp.success(updatedRoom);
 		}
-		
 		
 		//delete by room id
 		@DeleteMapping("/deleteRoomById/{id}")
@@ -120,4 +158,6 @@
 	
 		    return Resp.success(room);
 		}
+		
+		
 	}
