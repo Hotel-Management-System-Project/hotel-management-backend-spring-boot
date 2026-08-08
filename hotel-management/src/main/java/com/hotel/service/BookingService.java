@@ -22,15 +22,31 @@ public class BookingService {
     }
 
     public List<Booking> getUserBookings(Integer userId) {
-        return repo.findByUser_UserId(userId); // ✅ FIX
+        return completeCheckedOutBookings(repo.findByUser_UserId(userId));
     }
 
     public List<Booking> getAllBookings() {
-        return repo.findAll();
+        return completeCheckedOutBookings(repo.findAll());
     }
 
     public List<Booking> getHotelBookings(Integer hotelId) {
-        return repo.findByHotelId(hotelId);
+        return completeCheckedOutBookings(repo.findByHotelId(hotelId));
+    }
+
+    private List<Booking> completeCheckedOutBookings(List<Booking> bookings) {
+        LocalDate today = LocalDate.now();
+        List<Booking> completed = bookings.stream()
+                .filter(booking -> booking.getStatus() == Booking.Status.BOOKED)
+                .filter(booking -> booking.getCheckOutDate() != null)
+                .filter(booking -> !booking.getCheckOutDate().isAfter(today))
+                .toList();
+
+        completed.forEach(booking -> booking.setStatus(Booking.Status.COMPLETED));
+        if (!completed.isEmpty()) {
+            repo.saveAll(completed);
+        }
+
+        return bookings;
     }
 
     public Booking getById(int id) {
@@ -53,6 +69,22 @@ public class BookingService {
     public void cancelBooking(int id) {
         Booking booking = getById(id);
         booking.setStatus(Booking.Status.CANCELLED);
+        repo.save(booking);
+    }
+
+    public void completeBooking(int id) {
+        Booking booking = getById(id);
+
+        if (booking.getStatus() != Booking.Status.BOOKED) {
+            throw new RuntimeException("Only booked reservations can be completed");
+        }
+
+        if (booking.getCheckOutDate() == null
+                || booking.getCheckOutDate().isAfter(LocalDate.now())) {
+            throw new RuntimeException("A booking can be completed on or after its checkout date");
+        }
+
+        booking.setStatus(Booking.Status.COMPLETED);
         repo.save(booking);
     }
 
