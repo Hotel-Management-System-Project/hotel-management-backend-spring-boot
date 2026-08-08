@@ -79,6 +79,16 @@ public class BookingController {
                 .anyMatch(a -> a.getAuthority().equals("ROLE_HOTEL_OWNER"));
     }
 
+    private boolean ownsBookingHotel(Booking booking, User owner) {
+        return booking.getBookingRooms() != null
+                && booking.getBookingRooms().stream().anyMatch(bookingRoom ->
+                        bookingRoom.getRoom() != null
+                                && bookingRoom.getRoom().getHotel() != null
+                                && bookingRoom.getRoom().getHotel().getOwner() != null
+                                && bookingRoom.getRoom().getHotel().getOwner().getUserId()
+                                        .equals(owner.getUserId()));
+    }
+
     private BookingDTO toDTO(Booking booking) {
         BookingDTO dto = mapper.map(booking, BookingDTO.class);
         if (booking.getUser() != null) {
@@ -222,6 +232,19 @@ public class BookingController {
 
         service.cancelBooking(id);
         return Resp.success("Booking Cancelled");
+    }
+
+    @PutMapping("/complete/{id}")
+    public Resp<?> complete(@PathVariable int id) {
+        Booking booking = service.getById(id);
+        User loggedInUser = getUser();
+
+        if (!isAdmin() && (!isOwner() || !ownsBookingHotel(booking, loggedInUser))) {
+            return Resp.error("Only the booking hotel owner can complete this booking");
+        }
+
+        service.completeBooking(id);
+        return Resp.success("Booking completed");
     }
 
     // ✅ SEARCH (ADMIN)
