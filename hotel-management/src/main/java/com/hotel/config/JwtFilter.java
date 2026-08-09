@@ -33,10 +33,21 @@ public class JwtFilter extends OncePerRequestFilter {
     protected boolean shouldNotFilter(
             HttpServletRequest request
     ) {
-        String path = request.getServletPath();
+        if (HttpMethod.OPTIONS.matches(request.getMethod())) {
+            return true;
+        }
 
-        return path.startsWith("/api/auth/")
-                || HttpMethod.OPTIONS.matches(request.getMethod());
+        if (!HttpMethod.POST.matches(request.getMethod())) {
+            return false;
+        }
+
+        String path = request.getServletPath();
+        return path.equals("/api/auth/login")
+                || path.equals("/api/auth/signup")
+                || path.equals("/api/auth/send-signup-otp")
+                || path.equals("/api/auth/verify-signup-otp")
+                || path.equals("/api/auth/forgot-password/send-otp")
+                || path.equals("/api/auth/forgot-password/reset");
     }
 
     @Override

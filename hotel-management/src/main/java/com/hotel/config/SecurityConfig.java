@@ -46,8 +46,17 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.OPTIONS, "/**")
                 .permitAll()
 
-                // Login, signup and OTP APIs are public.
-                .requestMatchers("/api/auth/**")
+                // Only unauthenticated account-creation and recovery routes are public.
+                // Password changes and account deletion must continue through JWT auth.
+                .requestMatchers(
+                    HttpMethod.POST,
+                    "/api/auth/login",
+                    "/api/auth/signup",
+                    "/api/auth/send-signup-otp",
+                    "/api/auth/verify-signup-otp",
+                    "/api/auth/forgot-password/send-otp",
+                    "/api/auth/forgot-password/reset"
+                )
                 .permitAll()
 
                 // Only administrators can access admin APIs.
