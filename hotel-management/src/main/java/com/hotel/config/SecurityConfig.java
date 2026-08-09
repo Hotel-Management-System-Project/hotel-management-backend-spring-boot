@@ -54,6 +54,12 @@ public class SecurityConfig {
                 .requestMatchers("/api/admin/**")
                 .hasRole("ADMIN")
 
+                // Existing browsers may hold a short-lived JWT issued before
+                // HOTEL_OWNER replaced OWNER. Keep that legacy role valid only
+                // for the room-edit route while those tokens expire.
+                .requestMatchers(HttpMethod.PUT, "/updateById/**")
+                .hasAnyRole("ADMIN", "HOTEL_OWNER", "OWNER")
+
                 // Admin and hotel owner can create hotels and rooms.
                 .requestMatchers(
                     HttpMethod.POST,
@@ -68,8 +74,8 @@ public class SecurityConfig {
                 // Admin and hotel owner can update hotels and rooms.
                 .requestMatchers(
                     HttpMethod.PUT,
+                    "/api/hotels/*",
                     "/api/hotels/*/submit",
-                    "/updateById/**",
                     "/updateByRoomNumber/**",
                     "/api/room-images/**"
                 )

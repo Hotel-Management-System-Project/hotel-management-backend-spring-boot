@@ -8,4 +8,9 @@ public interface HotelRepository extends JpaRepository<Hotel, Integer> {
 	
     List<Hotel> findByOwner_UserId(Integer ownerId);
 
+    /**
+     * Customer-facing searches must only use administrator-approved hotels.
+     */
+    List<Hotel> findByStatus(Hotel.Status status);
+
 }

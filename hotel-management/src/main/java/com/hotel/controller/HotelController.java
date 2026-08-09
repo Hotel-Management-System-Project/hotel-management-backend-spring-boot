@@ -219,6 +219,42 @@ public class HotelController {
     }
 
     /**
+     * Updates the editable details of a hotel.
+     *
+     * Owners can update only their own hotels. Administrators can update any
+     * hotel, but ownership, rating, rooms, images, and approval status are not
+     * changed by this operation.
+     */
+    @PutMapping("/{id}")
+    public Resp<?> updateHotel(
+            @PathVariable Integer id,
+            @RequestBody HotelRequest request,
+            Authentication authentication
+    ) {
+        if (authentication == null) {
+            return Resp.error("Authentication is required");
+        }
+
+        boolean isOwner = hasRole(authentication, "HOTEL_OWNER");
+        boolean isAdmin = hasRole(authentication, "ADMIN");
+
+        if (!isOwner && !isAdmin) {
+            return Resp.error(
+                    "Only hotel owners and administrators can update hotels"
+            );
+        }
+
+        Hotel updatedHotel = hotelService.updateHotel(
+                id,
+                request,
+                authentication.getName(),
+                isAdmin
+        );
+
+        return Resp.success(toResponse(updatedHotel));
+    }
+
+    /**
      * Submits a completed hotel draft for administrator approval.
      *
      * A hotel must have at least one room before submission.

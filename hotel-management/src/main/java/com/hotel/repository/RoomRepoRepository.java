@@ -21,6 +21,8 @@ public interface RoomRepoRepository
 
     List<Room> findByRoomType(String roomType);
 
+    List<Room> findByHotel_HotelId(Integer hotelId);
+
     boolean existsByHotel_HotelIdAndRoomNumber(
             Integer hotelId,
             Integer roomNumber
