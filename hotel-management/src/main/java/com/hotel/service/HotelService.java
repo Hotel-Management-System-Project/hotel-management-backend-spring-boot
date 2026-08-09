@@ -81,6 +81,54 @@ public class HotelService {
                 );
     }
 
+    @Transactional
+    public Hotel updateHotel(
+            Integer hotelId,
+            HotelRequest request,
+            String requesterEmail,
+            boolean isAdmin
+    ) {
+        if (request == null) {
+            throw new RuntimeException("Hotel information is required");
+        }
+
+        if (isBlank(request.getHotelName())
+                || isBlank(request.getAddress())
+                || isBlank(request.getCity())
+                || isBlank(request.getState())
+                || isBlank(request.getPincode())) {
+            throw new RuntimeException(
+                    "Hotel name, address, city, state, and pincode are required"
+            );
+        }
+
+        Hotel hotel = getById(hotelId);
+        boolean isOwner = hotel.getOwner() != null
+                && hotel.getOwner().getEmail()
+                        .equalsIgnoreCase(requesterEmail);
+
+        if (!isAdmin && !isOwner) {
+            throw new RuntimeException("You can update only your own hotel");
+        }
+
+        hotel.setHotelName(request.getHotelName().trim());
+        hotel.setDescription(
+                request.getDescription() == null
+                        ? null
+                        : request.getDescription().trim()
+        );
+        hotel.setAddress(request.getAddress().trim());
+        hotel.setCity(request.getCity().trim());
+        hotel.setState(request.getState().trim());
+        hotel.setPincode(request.getPincode().trim());
+
+        return hotelRepository.save(hotel);
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
+    }
+
     public List<Hotel> getAll() {
         return hotelRepository.findAll();
     }

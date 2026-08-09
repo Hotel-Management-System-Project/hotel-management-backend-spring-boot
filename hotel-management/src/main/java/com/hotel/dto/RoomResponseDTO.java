@@ -25,5 +25,13 @@ public class RoomResponseDTO {
 
     private Boolean availabilityStatus;
 
+    // These are returned when an existing room is opened in the web edit
+    // form. Without them the form submits null values that fail validation.
+    private Boolean airConditioned;
+
+    private Boolean hasWifi;
+
+    private Boolean hasTv;
+
     private LocalDate createdAt;
 }

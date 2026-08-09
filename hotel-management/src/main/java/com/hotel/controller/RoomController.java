@@ -120,10 +120,12 @@
 		            .getAuthorities()
 		            .stream()
 		            .anyMatch(authority ->
-		                authority.getAuthority()
-		                        .equals("ROLE_HOTEL_OWNER")
-		                || authority.getAuthority()
-		                        .equals("ROLE_ADMIN")
+			        authority.getAuthority()
+			                        .equals("ROLE_HOTEL_OWNER")
+			                || authority.getAuthority()
+			                        .equals("ROLE_OWNER")
+			                || authority.getAuthority()
+			                        .equals("ROLE_ADMIN")
 		            );
 
 		    if (!allowed) {
