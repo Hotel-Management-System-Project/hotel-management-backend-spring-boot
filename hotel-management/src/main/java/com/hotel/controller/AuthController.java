@@ -13,13 +13,13 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.hotel.config.JwtUtil;
 import com.hotel.dto.SignupRequest;
+import com.hotel.model.Role;
 import com.hotel.model.User;
 import com.hotel.service.UserService;
 import com.hotel.utils.Resp;
 
 @RestController
 @RequestMapping("/api/auth")
-@CrossOrigin("*")
 public class AuthController {
 
     private final UserService userService;
@@ -55,7 +55,11 @@ public class AuthController {
         user.setEmail(request.getEmail());
         user.setPhone(request.getPhone());
         user.setPassword(request.getPassword());
-        user.setRole(request.getRole());
+        // Public registration must never be able to create an administrator.
+        // Hotel owners still complete the existing OTP verification flow.
+        user.setRole(request.getRole() == Role.HOTEL_OWNER
+                ? Role.HOTEL_OWNER
+                : Role.CUSTOMER);
         user.setEmailVerificationToken(
                 request.getEmailVerificationToken()
         );

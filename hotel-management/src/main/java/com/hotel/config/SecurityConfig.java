@@ -1,7 +1,9 @@
 package com.hotel.config;
 
+import java.util.ArrayList;
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -17,9 +19,13 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 public class SecurityConfig {
 
     private final JwtFilter jwtFilter;
+    private final String frontendOrigin;
 
-    public SecurityConfig(JwtFilter jwtFilter) {
+    public SecurityConfig(
+            JwtFilter jwtFilter,
+            @Value("${app.cors.frontend-origin:}") String frontendOrigin) {
         this.jwtFilter = jwtFilter;
+        this.frontendOrigin = frontendOrigin;
     }
 
     @Bean
@@ -120,12 +126,16 @@ public class SecurityConfig {
         CorsConfiguration configuration =
                 new CorsConfiguration();
 
-        configuration.setAllowedOriginPatterns(
-            List.of(
+        List<String> allowedOrigins = new ArrayList<>(List.of(
                 "http://localhost:*",
                 "http://127.0.0.1:*"
-            )
-        );
+        ));
+
+        if (frontendOrigin != null && !frontendOrigin.isBlank()) {
+            allowedOrigins.add(frontendOrigin.trim());
+        }
+
+        configuration.setAllowedOriginPatterns(allowedOrigins);
 
         configuration.setAllowedMethods(
             List.of(

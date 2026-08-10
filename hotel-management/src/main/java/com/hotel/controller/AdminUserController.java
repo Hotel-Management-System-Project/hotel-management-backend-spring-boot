@@ -16,7 +16,6 @@ import com.hotel.utils.Resp;
 
 @RestController
 @RequestMapping("/api/admin/users")
-@CrossOrigin("*")
 public class AdminUserController {
 
     private final UserService userService;

@@ -21,7 +21,6 @@ import com.hotel.utils.Resp;
 
 @RestController
 @RequestMapping("/api/booking-rooms")
-@CrossOrigin("*")
 public class BookingRoomController {
 
     private final BookingRoomService bookingRoomService;
