@@ -14,4 +14,7 @@ WORKDIR /app
 
 COPY --from=build /app/target/hotel-management-0.0.1-SNAPSHOT.jar app.jar
 
+# Keep the Spring Boot process within Render's 512 MB free-instance limit.
+ENV JAVA_TOOL_OPTIONS="-Xms64m -Xmx256m -XX:MaxMetaspaceSize=128m -XX:MaxDirectMemorySize=32m -XX:ReservedCodeCacheSize=64m -XX:+UseSerialGC"
+
 CMD ["sh", "-c", "java -jar app.jar --server.port=${PORT:-8080}"]
